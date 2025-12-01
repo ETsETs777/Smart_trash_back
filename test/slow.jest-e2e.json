@@ -1,0 +1,31 @@
+{
+  "moduleFileExtensions": [
+    "ts",
+    "js",
+    "json"
+  ],
+  "rootDir": "..",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "collectCoverageFrom": [
+    "**/modules/**/*.(t|j)s"
+  ],
+  "coverageDirectory": "../coverage",
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": [
+    "<rootDir>/test/setup-tests.e2e.ts"
+  ],
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/src/$1"
+  },
+  "maxWorkers": 2, 
+  "modulePathIgnorePatterns": [
+    "<rootDir>/dist/",
+    "<rootDir>/node_modules/",
+    "<rootDir>/src/entities/",
+    "<rootDir>/src/errors/",
+    "<rootDir>/src/events/"
+  ]
+}
