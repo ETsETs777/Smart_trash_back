@@ -1,5 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { BeforeInsert, Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { CompanyEntity } from './company.entity';
 import { WastePhotoEntity } from './waste-photo.entity';
 import { EmployeeAchievementEntity } from './employee-achievement.entity';
@@ -35,6 +36,20 @@ export class EmployeeEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   email?: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Хэш пароля сотрудника (только для зарегистрированных)',
+  })
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  passwordHash?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'JWT токен сотрудника для авторизации (только для зарегистрированных)',
+  })
+  @Column({ type: 'text', nullable: true })
+  jwtToken?: string | null;
+
   @Field(() => CompanyEntity, {
     description: 'Компания, в которой работает сотрудник',
   })
@@ -68,12 +83,24 @@ export class EmployeeEntity {
   updatedAt: Date;
 
   @BeforeInsert()
-  buildFullName(): void {
+  async buildFullNameAndHashPassword(): Promise<void> {
     const first = this.firstName ? this.firstName.trim() : '';
     const last = this.lastName ? this.lastName.trim() : '';
     this.fullName = `${first} ${last}`.trim();
     if (this.email) {
       this.email = this.email.trim().toLowerCase();
+    }
+    if (this.passwordHash && this.isRegistered) {
+      const saltRounds = 10;
+      this.passwordHash = await bcrypt.hash(this.passwordHash, saltRounds);
+    }
+  }
+
+  @BeforeUpdate()
+  async hashPasswordOnUpdate(): Promise<void> {
+    if (this.passwordHash && !this.passwordHash.startsWith('$2b$')) {
+      const saltRounds = 10;
+      this.passwordHash = await bcrypt.hash(this.passwordHash, saltRounds);
     }
   }
 }

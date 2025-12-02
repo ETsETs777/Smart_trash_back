@@ -31,6 +31,13 @@ export class CompanyAdminEntity {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'JWT токен администратора для авторизации',
+  })
+  @Column({ type: 'text', nullable: true })
+  jwtToken?: string | null;
+
   @Field(() => CompanyEntity, {
     nullable: true,
     description: 'Компания, к которой привязан администратор',

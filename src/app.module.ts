@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import {  APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,7 +15,7 @@ import { SmartTrashModule } from './modules/smart-trash/smart-trash.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtGuard } from './modules/auth/jwt.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
-import { AllExceptionLoggerFilter } from './common/filters/all-exception-logger.filter';
+//import { AllExceptionLoggerFilter } from './common/filters/all-exception-logger.filter';
 
 @Module({
   imports: [
@@ -56,7 +56,7 @@ import { AllExceptionLoggerFilter } from './common/filters/all-exception-logger.
     AppResolver,
     { provide: APP_GUARD, useClass: JwtGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    { provide: APP_FILTER, useClass: AllExceptionLoggerFilter },
+   // { provide: APP_FILTER, useClass: AllExceptionLoggerFilter },
   ],
 })
 export class AppModule {}
