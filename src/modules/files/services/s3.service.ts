@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Readable } from 'node:stream';
 import {
   BucketItem,
@@ -13,10 +13,11 @@ import { NodeEnv } from 'src/modules/config/node-env.enum';
  * Service for interacting with S3 object storage.
  */
 @Injectable()
-export class S3Service {
+export class S3Service implements OnModuleInit {
   private readonly logger = new Logger(S3Service.name);
 
   private readonly minio: Client;
+  private bucketInitialized = false;
 
   constructor(private readonly configService: ConfigService) {
     const config = this.configService.config;
@@ -41,6 +42,52 @@ export class S3Service {
     });
   }
 
+  async onModuleInit(): Promise<void> {
+    await this.initializeBucket();
+  }
+
+  private async initializeBucket(): Promise<void> {
+    if (this.bucketInitialized) {
+      return;
+    }
+
+    try {
+      const bucketName = this.configService.config.s3.bucketName;
+      let retries = 5;
+      let exists = false;
+
+      while (retries > 0 && !exists) {
+        try {
+          exists = await this.minio.bucketExists(bucketName);
+          break;
+        } catch (error) {
+          retries--;
+          this.logger.warn(
+            `Попытка проверить существование bucket "${bucketName}" не удалась. Осталось попыток: ${retries}`,
+          );
+          if (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+      }
+
+      if (!exists) {
+        await this.minio.makeBucket(bucketName);
+        this.logger.log(`Bucket "${bucketName}" успешно создан`);
+      } else {
+        this.logger.log(`Bucket "${bucketName}" уже существует`);
+      }
+
+      this.bucketInitialized = true;
+    } catch (error) {
+      this.logger.error(
+        `Не удалось инициализировать bucket: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   /**
    * Uploads a file to the bucket.
    * @param buffer - file buffer.
@@ -53,12 +100,29 @@ export class S3Service {
     buffer: Buffer,
     metadata?: ItemBucketMetadata,
   ): Promise<UploadedObjectInfo> {
-    return this.minio.putObject(
-      this.configService.config.s3.bucketName,
-      key,
-      buffer,
-      metadata,
-    );
+    try {
+      await this.ensureBucketExists();
+      const result = await this.minio.putObject(
+        this.configService.config.s3.bucketName,
+        key,
+        buffer,
+        metadata,
+      );
+      this.logger.log(`Файл успешно загружен: ${key}`);
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Ошибка загрузки файла ${key}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  private async ensureBucketExists(): Promise<void> {
+    if (!this.bucketInitialized) {
+      await this.initializeBucket();
+    }
   }
 
   /**
@@ -104,7 +168,19 @@ export class S3Service {
    * @return Readable stream
    */
   async createStream(key: string): Promise<Readable> {
-    return this.minio.getObject(this.configService.config.s3.bucketName, key);
+    try {
+      const exists = await this.isFileExists(key);
+      if (!exists) {
+        throw new Error(`Файл с ключом "${key}" не найден в bucket`);
+      }
+      return await this.minio.getObject(this.configService.config.s3.bucketName, key);
+    } catch (error) {
+      this.logger.error(
+        `Ошибка создания stream для ${key}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -113,11 +189,23 @@ export class S3Service {
    * @return Presigned URL
    */
   async getPresignedUrl(key: string): Promise<string> {
-    return this.minio.presignedGetObject(
-      this.configService.config.s3.bucketName,
-      key,
-      this.configService.config.s3.presignedUrlExpiration,
-    );
+    try {
+      const exists = await this.isFileExists(key);
+      if (!exists) {
+        throw new Error(`Файл с ключом "${key}" не найден в bucket`);
+      }
+      return await this.minio.presignedGetObject(
+        this.configService.config.s3.bucketName,
+        key,
+        this.configService.config.s3.presignedUrlExpiration,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Ошибка получения presigned URL для ${key}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 
   async getFileStream(key: string): Promise<Readable> {

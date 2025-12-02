@@ -4,17 +4,17 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: rentesy-postgres-dev
+    container_name: smart-trash-postgres-dev
     environment:
-      POSTGRES_DB: rentesy-app-template-dev
+      POSTGRES_DB: smart-trash-dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1qa2ws3ed
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - rentesy-network
+      - smart-trash-network
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -24,9 +24,9 @@ services:
   # MinIO S3 Storage
   minio:
     image: minio/minio:latest
-    container_name: rentesy-minio-dev
+    container_name: smart-trash-minio-dev
     environment:
-      MINIO_ROOT_USER: 12356789
+      MINIO_ROOT_USER: 12345678
       MINIO_ROOT_PASSWORD: 12345678
     ports:
       - '9000:9000'
@@ -34,7 +34,7 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - rentesy-network
+      - smart-trash-network
     command: server /data --console-address ":9001"
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
@@ -47,40 +47,55 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: rentesy-app-dev
+    container_name: smart-trash-app-dev
     environment:
       NODE_ENV: dev
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: 1qa2ws3ed
-      DB_DATABASE: rentesy-app-template-dev
+      DB_DATABASE: smart-trash-app-template-dev
       S3_ENDPOINT: minio
       S3_PORT: 9000
-      S3_ACCESS_KEY: 12356789
+      S3_ACCESS_KEY: 12345678
       S3_SECRET_KEY: 12345678
-      S3_BUCKET_NAME: rentesy-bucket
+      S3_BUCKET_NAME: smart-trash
       SERVER_PORT: 3000
       JWT_TOKEN_SECRET: dev-secret-key-change-in-production
       JWT_USER_TOKEN_EXPIRES_IN: 7d
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - '3000:3000'
     volumes:
       - .:/app
       - /app/node_modules
     networks:
-      - rentesy-network
+      - smart-trash-network
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+      redis:
+        condition: service_started
     command: npm run start:dev
+
+  redis:
+    image: redis:7-alpine
+    container_name: smart-trash-redis-dev
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart-trash-network
 
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
 
 networks:
-  rentesy-network:
+  smart-trash-network:
     driver: bridge

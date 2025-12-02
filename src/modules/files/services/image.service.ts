@@ -361,6 +361,28 @@ export class ImageService {
     }
   }
 
+  async getImageBuffer(id: string): Promise<Buffer> {
+    const stream = await this.getImageStream(id);
+    const streamToBuffer = (await import('stream-to-buffer')).default;
+
+    return new Promise<Buffer>((resolve, reject) => {
+      streamToBuffer(stream, (err: Error | null, buffer: Buffer) => {
+        if (err) {
+          this.logger.error(
+            `(${this.getImageBuffer.name}) Не удалось преобразовать Stream в Buffer для изображения с id=${id}: ${err.message}`,
+            err.stack,
+          );
+          return reject(
+            new InternalServerErrorException(
+              `Не удалось преобразовать Stream в Buffer для изображения с id=${id}`,
+            ),
+          );
+        }
+        resolve(buffer);
+      });
+    });
+  }
+
   async remove(imageIds: string[], manager?: EntityManager): Promise<void> {
     const imageRepository =
       manager?.getRepository(ImageEntity) ?? this.imageRepository;

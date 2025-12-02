@@ -1,0 +1,7 @@
+export enum AuthRole {
+  COMPANY_ADMIN = 'COMPANY_ADMIN',
+  EMPLOYEE = 'EMPLOYEE',
+  NON_AUTH_EMPLOYEE = 'NON_AUTH_EMPLOYEE',
+}
+
+

@@ -42,6 +42,8 @@
     "@nestjs/typeorm": "^10.0.2",
     "@types/ms": "^0.7.34",
     "axios": "^1.7.9",
+    "@nestjs/bullmq": "^10.0.0",
+    "bullmq": "^5.12.2",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -71,7 +73,10 @@
     "uuid": "^11.0.5",
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "ioredis": "^5.4.2",
+    "langchain-gigachat": "^0.0.14",
+    "form-data": "^4.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
