@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AchievementEntity } from 'src/entities/smart-trash/achievement.entity';
 import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
-import { CompanyAdminEntity } from 'src/entities/smart-trash/company-admin.entity';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { EmployeeAchievementEntity } from 'src/entities/smart-trash/employee-achievement.entity';
 import { WastePhotoEntity } from 'src/entities/smart-trash/waste-photo.entity';
 import { AchievementCriterionType } from 'src/entities/smart-trash/achievement-criterion.enum';
@@ -19,10 +18,8 @@ export class AchievementService {
     private readonly employeeAchievementRepository: Repository<EmployeeAchievementEntity>,
     @InjectRepository(CompanyEntity)
     private readonly companyRepository: Repository<CompanyEntity>,
-    @InjectRepository(CompanyAdminEntity)
-    private readonly adminRepository: Repository<CompanyAdminEntity>,
-    @InjectRepository(EmployeeEntity)
-    private readonly employeeRepository: Repository<EmployeeEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(WastePhotoEntity)
     private readonly wastePhotoRepository: Repository<WastePhotoEntity>,
   ) {}
@@ -37,12 +34,12 @@ export class AchievementService {
       throw new NotFoundException('Компания не найдена');
     }
 
-    let admin: CompanyAdminEntity | null = null;
+    let createdBy: UserEntity | null = null;
     if (input.createdByAdminId) {
-      admin = await this.adminRepository.findOneBy({
+      createdBy = await this.userRepository.findOneBy({
         id: input.createdByAdminId,
       });
-      if (!admin) {
+      if (!createdBy) {
         throw new NotFoundException('Администратор компании не найден');
       }
     }
@@ -53,7 +50,7 @@ export class AchievementService {
       criterionType: input.criterionType,
       threshold: input.threshold,
       company,
-      createdBy: admin ?? undefined,
+      createdBy: createdBy ?? undefined,
     });
     return this.achievementRepository.save(achievement);
   }
@@ -67,16 +64,21 @@ export class AchievementService {
   async checkAndGrantForEmployeeByPhoto(
     wastePhoto: WastePhotoEntity,
   ): Promise<EmployeeAchievementEntity[]> {
-    if (!wastePhoto.employee || !wastePhoto.company) {
+    if (!wastePhoto.user || !wastePhoto.company) {
       return [];
     }
 
-    const employee = await this.employeeRepository.findOne({
-      where: { id: wastePhoto.employee.id },
-      relations: ['company'],
+    const user = await this.userRepository.findOne({
+      where: { id: wastePhoto.user.id },
+      relations: ['employeeCompanies'],
     });
-    if (!employee) {
-      throw new NotFoundException('Сотрудник не найден для выдачи ачивок');
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден для выдачи ачивок');
+    }
+
+    const isEmployeeInCompany = user.employeeCompanies?.some((c) => c.id === wastePhoto.company.id);
+    if (!isEmployeeInCompany) {
+      return [];
     }
 
     const achievements = await this.achievementRepository.find({
@@ -85,7 +87,7 @@ export class AchievementService {
 
     const alreadyEarned = await this.employeeAchievementRepository.find({
       where: {
-        employee: { id: employee.id },
+        user: { id: user.id },
       },
       relations: ['achievement'],
     });
@@ -99,7 +101,7 @@ export class AchievementService {
       if (alreadyEarnedIds.has(achievement.id)) {
         continue;
       }
-      const reached = await this.isCriterionReached(achievement, employee);
+      const reached = await this.isCriterionReached(achievement, user);
       if (reached) {
         toGrant.push(achievement);
       }
@@ -109,7 +111,7 @@ export class AchievementService {
 
     for (const achievement of toGrant) {
       const ea = this.employeeAchievementRepository.create({
-        employee,
+        user,
         achievement,
       });
       created.push(await this.employeeAchievementRepository.save(ea));
@@ -120,13 +122,15 @@ export class AchievementService {
 
   private async isCriterionReached(
     achievement: AchievementEntity,
-    employee: EmployeeEntity,
+    user: UserEntity,
   ): Promise<boolean> {
+    const companyId = achievement.company.id;
+
     if (achievement.criterionType === AchievementCriterionType.TOTAL_PHOTOS) {
       const count = await this.wastePhotoRepository.count({
         where: {
-          employee: { id: employee.id },
-          company: { id: employee.company.id },
+          user: { id: user.id },
+          company: { id: companyId },
         },
       });
       return count >= achievement.threshold;
@@ -135,9 +139,9 @@ export class AchievementService {
     if (achievement.criterionType === AchievementCriterionType.CORRECT_BIN_MATCHES) {
       const count = await this.wastePhotoRepository
         .createQueryBuilder('wp')
-        .where('wp.employeeId = :employeeId', { employeeId: employee.id })
+        .where('wp.userId = :userId', { userId: user.id })
         .andWhere('wp.companyId = :companyId', {
-          companyId: employee.company.id,
+          companyId: companyId,
         })
         .andWhere('wp.recommendedBinType IS NOT NULL')
         .getCount();
@@ -147,9 +151,9 @@ export class AchievementService {
     if (achievement.criterionType === AchievementCriterionType.STREAK_DAYS) {
       const photos = await this.wastePhotoRepository
         .createQueryBuilder('wp')
-        .where('wp.employeeId = :employeeId', { employeeId: employee.id })
+        .where('wp.userId = :userId', { userId: user.id })
         .andWhere('wp.companyId = :companyId', {
-          companyId: employee.company.id,
+          companyId: companyId,
         })
         .andWhere('wp.recommendedBinType IS NOT NULL')
         .orderBy('wp.createdAt', 'ASC')

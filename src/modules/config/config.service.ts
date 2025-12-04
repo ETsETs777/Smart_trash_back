@@ -70,6 +70,30 @@ export interface IJsonConfig {
     secretKey: string; // S3 secret key.
     presignedUrlExpiration: number; // Presigned url expiration time in seconds.
   };
+  /**
+   * SMTP (email) configuration
+   */
+  smtp: {
+    host: string; // SMTP server host.
+    port: number; // SMTP server port.
+    secure: boolean; // Use TLS/SSL.
+    auth: {
+      user: string; // SMTP username.
+      pass: string; // SMTP password.
+    };
+    from: string; // Default sender email address.
+  };
+  /**
+   * GigaChat (LLM) configuration
+   */
+  gigachat: {
+    authKey: string; // GigaChat API key.
+    scope: string; // GigaChat scope.
+    model: string; // GigaChat model name.
+    baseUrl: string; // GigaChat base URL.
+    authUrl: string; // GigaChat OAuth URL.
+    rejectUnauthorized: boolean; // Reject unauthorized SSL certificates.
+  };
 }
 
 /**
@@ -155,6 +179,22 @@ export class ConfigService {
       S3_PORT: joi.string().required(),
       SERVER_PORT: joi.string().required(),
       JWT_USER_TOKEN_EXPIRES_IN: joi.string().required(),
+      SMTP_HOST: joi.string().required(),
+      SMTP_PORT: joi.number().port().required(),
+      SMTP_SECURE: joi.string().valid('true', 'false').required(),
+      SMTP_USER: joi.string().required(),
+      SMTP_PASS: joi.string().required(),
+      SMTP_FROM: joi.string().email().required(),
+      GIGACHAT_API_KEY: joi.string().required(),
+      GIGACHAT_SCOPE: joi.string().optional().default('GIGACHAT_API_PERS'),
+      GIGACHAT_REJECT_UNAUTHORIZED: joi
+        .string()
+        .valid('true', 'false')
+        .optional()
+        .default('false'),
+      GIGACHAT_BASE_URL: joi.string().optional(),
+      GIGACHAT_AUTH_URL: joi.string().optional(),
+      GIGACHAT_MODEL: joi.string().optional().default('gigachat'),
     })
     .required();
 
@@ -186,6 +226,28 @@ export class ConfigService {
       accessKey: process.env.S3_ACCESS_KEY,
       secretKey: process.env.S3_SECRET_KEY,
       presignedUrlExpiration: ms('1d') / 1000,
+    }),
+    smtp: joi.forbidden().default({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      from: process.env.SMTP_FROM,
+    }),
+    gigachat: joi.forbidden().default({
+      authKey: process.env.GIGACHAT_API_KEY,
+      scope: process.env.GIGACHAT_SCOPE || 'GIGACHAT_API_PERS',
+      model: process.env.GIGACHAT_MODEL || 'gigachat',
+      baseUrl:
+        process.env.GIGACHAT_BASE_URL ||
+        'https://gigachat.devices.sberbank.ru/api/v1',
+      authUrl:
+        process.env.GIGACHAT_AUTH_URL ||
+        'https://gigachat.devices.sberbank.ru/api/v1/oauth',
+      rejectUnauthorized: process.env.GIGACHAT_REJECT_UNAUTHORIZED === 'true',
     }),
   });
 }

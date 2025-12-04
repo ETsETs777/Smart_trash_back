@@ -1,10 +1,10 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { CompanyAdminEntity } from './company-admin.entity';
-import { EmployeeEntity } from './employee.entity';
+import { BeforeInsert, Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { UserEntity } from './user.entity';
 import { CollectionAreaEntity } from './collection-area.entity';
 import { WastePhotoEntity } from './waste-photo.entity';
 import { AchievementEntity } from './achievement.entity';
+import { ImageEntity } from 'src/entities/files/image.entity';
 
 @ObjectType({ description: 'Компания, подключённая к системе умных урн' })
 @Entity('companies')
@@ -33,19 +33,25 @@ export class CompanyEntity {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  @Field(() => [CompanyAdminEntity], {
+  @Field(() => UserEntity, {
     nullable: true,
-    description: 'Список администраторов, управляющих данной компанией',
+    description: 'Администратор, создавший компанию',
   })
-  @OneToMany(() => CompanyAdminEntity, (admin) => admin.company)
-  admins?: CompanyAdminEntity[];
+  @ManyToOne(() => UserEntity, (user) => user.createdCompanies, {
+    onDelete: 'SET NULL',
+    nullable: true,
+    eager: false,
+  })
+  createdBy?: UserEntity | null;
 
-  @Field(() => [EmployeeEntity], {
+  @Field(() => [UserEntity], {
     nullable: true,
-    description: 'Список сотрудников, привязанных к компании',
+    description: 'Сотрудники, работающие в компании',
   })
-  @OneToMany(() => EmployeeEntity, (employee) => employee.company)
-  employees?: EmployeeEntity[];
+  @ManyToMany(() => UserEntity, (user) => user.employeeCompanies, {
+    eager: false,
+  })
+  employees?: UserEntity[];
 
   @Field(() => [CollectionAreaEntity], {
     nullable: true,
@@ -67,6 +73,17 @@ export class CompanyEntity {
   })
   @OneToMany(() => AchievementEntity, (achievement) => achievement.company)
   achievements?: AchievementEntity[];
+
+  @Field(() => ImageEntity, {
+    nullable: true,
+    description: 'Логотип компании',
+  })
+  @ManyToOne(() => ImageEntity, {
+    onDelete: 'SET NULL',
+    nullable: true,
+    eager: false,
+  })
+  logo?: ImageEntity | null;
 
   @BeforeInsert()
   normalizeName(): void {

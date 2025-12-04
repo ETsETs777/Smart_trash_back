@@ -65,6 +65,18 @@ services:
       JWT_USER_TOKEN_EXPIRES_IN: 7d
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 465
+      SMTP_SECURE: 'false'
+      SMTP_USER: info@smarttrash.ru
+      SMTP_PASS: dsdsdsdsdsd
+      SMTP_FROM: info@smarttrash.ru
+      GIGACHAT_API_KEY: MDE5YTgxZDItOWY3Yy03NDI5LWE3ZWItZjI0MDAzOGQ0ZDIyOjJmOWM1ODU1LTA4N2ItNDUxOC04ZGE3LTA4MGNjMWQ4OGYyMw==
+      GIGACHAT_SCOPE: GIGACHAT_API_PERS
+      GIGACHAT_REJECT_UNAUTHORIZED: false
+      GIGACHAT_BASE_URL: https://ngw.devices.sberbank.ru:9443/api/v2
+      GIGACHAT_AUTH_URL: https://ngw.devices.sberbank.ru:9443/api/v2/oauth
+      GIGACHAT_MODEL: GigaChat
     ports:
       - '3000:3000'
     volumes:

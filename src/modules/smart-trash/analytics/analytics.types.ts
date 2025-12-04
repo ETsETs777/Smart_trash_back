@@ -1,6 +1,6 @@
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { CollectionAreaEntity } from 'src/entities/smart-trash/collection-area.entity';
 
 @ObjectType({
@@ -24,10 +24,10 @@ export class CompanyBinUsageStats {
     'Запись в таблице лидеров компании по количеству правильно утилизированного мусора',
 })
 export class CompanyLeaderboardEntry {
-  @Field(() => EmployeeEntity, {
-    description: 'Сотрудник компании',
+  @Field(() => UserEntity, {
+    description: 'Пользователь (сотрудник) компании',
   })
-  employee: EmployeeEntity;
+  employee: UserEntity;
 
   @Field(() => Int, {
     description:

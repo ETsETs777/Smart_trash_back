@@ -7,18 +7,14 @@ import { ConfigService } from 'src/modules/config/config.service';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthService } from './auth.service';
 import { AuthResolver } from './auth.resolver';
-import { CompanyAdminEntity } from 'src/entities/smart-trash/company-admin.entity';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { EmailService } from './services/email.service';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([
-      CompanyAdminEntity,
-      EmployeeEntity,
-      CompanyEntity,
-    ]),
+    TypeOrmModule.forFeature([UserEntity, CompanyEntity]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -31,8 +27,8 @@ import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
     }),
     ConfigModule,
   ],
-  providers: [JwtStrategy, AuthService, AuthResolver],
-  exports: [AuthService],
+  providers: [JwtStrategy, AuthService, AuthResolver, EmailService],
+  exports: [AuthService, EmailService],
 })
 export class AuthModule {}
 

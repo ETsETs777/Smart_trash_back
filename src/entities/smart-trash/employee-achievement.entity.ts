@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { EmployeeEntity } from './employee.entity';
+import { UserEntity } from './user.entity';
 import { AchievementEntity } from './achievement.entity';
 
 @ObjectType({ description: 'Факт получения ачивки конкретным сотрудником' })
@@ -10,15 +10,15 @@ export class EmployeeAchievementEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field(() => EmployeeEntity, {
-    description: 'Сотрудник, получивший ачивку',
+  @Field(() => UserEntity, {
+    description: 'Пользователь (сотрудник), получивший ачивку',
   })
-  @ManyToOne(() => EmployeeEntity, (employee) => employee.achievements, {
+  @ManyToOne(() => UserEntity, (user) => user.achievements, {
     onDelete: 'CASCADE',
     nullable: false,
     eager: false,
   })
-  employee: EmployeeEntity;
+  user: UserEntity;
 
   @Field(() => AchievementEntity, {
     description: 'Ачивка, которая была получена сотрудником',

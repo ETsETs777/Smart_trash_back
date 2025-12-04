@@ -1,56 +1,69 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
-import { CompanyAdminEntity } from 'src/entities/smart-trash/company-admin.entity';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { Public } from 'src/decorators/auth/public.decorator';
-import { AdminLoginInput } from './inputs/admin-login.input';
-import { EmployeeLoginInput } from './inputs/employee-login.input';
-import { EmployeeRegisterInput } from './inputs/employee-register.input';
+import { LoginInput } from './inputs/login.input';
+import { AdminRegisterInput } from './inputs/admin-register.input';
+import { EmployeeRegisterInput } from './inputs/employee-register-new.input';
+import { ConfirmEmailInput } from './inputs/confirm-email.input';
 
-@Resolver()
+@Resolver(() => UserEntity)
 export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Mutation(() => CompanyAdminEntity, {
+  @Mutation(() => UserEntity, {
     description:
-      'Авторизация администратора компании. Возвращает администратора с установленным JWT токеном.',
+      'Регистрация администратора компании. Создаёт компанию и пользователя с ролью ADMIN_COMPANY. Требует подтверждения email.',
   })
-  loginAdmin(
+  registerAdmin(
     @Args('input', {
-      description: 'Данные для авторизации администратора компании',
+      description: 'Данные для регистрации администратора компании',
     })
-    input: AdminLoginInput,
-  ): Promise<CompanyAdminEntity> {
-    return this.authService.loginAdmin(input);
+    input: AdminRegisterInput,
+  ): Promise<UserEntity> {
+    return this.authService.registerAdmin(input);
   }
 
   @Public()
-  @Mutation(() => EmployeeEntity, {
+  @Mutation(() => UserEntity, {
     description:
-      'Авторизация сотрудника компании. Возвращает сотрудника с установленным JWT токеном.',
-  })
-  loginEmployee(
-    @Args('input', {
-      description: 'Данные для авторизации сотрудника компании',
-    })
-    input: EmployeeLoginInput,
-  ): Promise<EmployeeEntity> {
-    return this.authService.loginEmployee(input);
-  }
-
-  @Public()
-  @Mutation(() => EmployeeEntity, {
-    description:
-      'Регистрация нового сотрудника компании. Возвращает зарегистрированного сотрудника с установленным JWT токеном.',
+      'Регистрация сотрудника компании. Создаёт пользователя с ролью EMPLOYEE. Требует подтверждения email.',
   })
   registerEmployee(
     @Args('input', {
       description: 'Данные для регистрации сотрудника компании',
     })
     input: EmployeeRegisterInput,
-  ): Promise<EmployeeEntity> {
+  ): Promise<UserEntity> {
     return this.authService.registerEmployee(input);
   }
-}
 
+  @Public()
+  @Mutation(() => UserEntity, {
+    description:
+      'Авторизация пользователя (администратора или сотрудника). Возвращает пользователя с установленным JWT токеном.',
+  })
+  login(
+    @Args('input', {
+      description: 'Данные для авторизации пользователя',
+    })
+    input: LoginInput,
+  ): Promise<UserEntity> {
+    return this.authService.login(input);
+  }
+
+  @Public()
+  @Mutation(() => UserEntity, {
+    description:
+      'Подтверждение адреса электронной почты по токену, отправленному на email',
+  })
+  confirmEmail(
+    @Args('input', {
+      description: 'Токен подтверждения электронной почты',
+    })
+    input: ConfirmEmailInput,
+  ): Promise<UserEntity> {
+    return this.authService.confirmEmail(input);
+  }
+}

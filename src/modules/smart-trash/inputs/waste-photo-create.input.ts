@@ -18,23 +18,9 @@ export class WastePhotoCreateInput {
   @Field(() => ID, {
     nullable: true,
     description:
-      'Идентификатор сотрудника, сделавшего фотографию (если сотрудник уже существует в системе)',
+      'Идентификатор пользователя (сотрудника), сделавшего фотографию',
   })
-  employeeId?: string | null;
-
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'Имя сотрудника, сделавшего фотографию (используется, если сотрудник ещё не зарегистрирован и не имеет идентификатора)',
-  })
-  employeeFirstName?: string | null;
-
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'Фамилия сотрудника, сделавшего фотографию (используется, если сотрудник ещё не зарегистрирован и не имеет идентификатора)',
-  })
-  employeeLastName?: string | null;
+  userId?: string | null;
 
   @Field(() => ID, {
     nullable: true,

@@ -1,8 +1,7 @@
 import { FileEntity } from './files/file.entity';
 import { ImageEntity } from './files/image.entity';
 import { CompanyEntity } from './smart-trash/company.entity';
-import { CompanyAdminEntity } from './smart-trash/company-admin.entity';
-import { EmployeeEntity } from './smart-trash/employee.entity';
+import { UserEntity } from './smart-trash/user.entity';
 import { CollectionAreaEntity } from './smart-trash/collection-area.entity';
 import { CollectionAreaBinEntity } from './smart-trash/collection-area-bin.entity';
 import { AchievementEntity } from './smart-trash/achievement.entity';
@@ -13,8 +12,7 @@ const Entities = [
   FileEntity,
   ImageEntity,
   CompanyEntity,
-  CompanyAdminEntity,
-  EmployeeEntity,
+  UserEntity,
   CollectionAreaEntity,
   CollectionAreaBinEntity,
   AchievementEntity,

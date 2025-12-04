@@ -19,11 +19,10 @@ export class EmployeeCreateInput {
   })
   lastName: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'Электронная почта сотрудника при регистрации',
+  @Field({
+    description: 'Электронная почта сотрудника (обязательна для создания)',
   })
-  email?: string | null;
+  email: string;
 
   @Field(() => Boolean, {
     nullable: true,

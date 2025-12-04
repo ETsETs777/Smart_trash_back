@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { WastePhotoEntity } from 'src/entities/smart-trash/waste-photo.entity';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { CollectionAreaEntity } from 'src/entities/smart-trash/collection-area.entity';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
 import {
@@ -17,8 +17,8 @@ export class AnalyticsService {
   constructor(
     @InjectRepository(WastePhotoEntity)
     private readonly wastePhotoRepository: Repository<WastePhotoEntity>,
-    @InjectRepository(EmployeeEntity)
-    private readonly employeeRepository: Repository<EmployeeEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(CollectionAreaEntity)
     private readonly areaRepository: Repository<CollectionAreaEntity>,
   ) {}
@@ -63,34 +63,35 @@ export class AnalyticsService {
   ): Promise<CompanyLeaderboardEntry[]> {
     const rows = await this.wastePhotoRepository
       .createQueryBuilder('wp')
-      .select('wp.employeeId', 'employeeId')
+      .select('wp.userId', 'userId')
       .addSelect('COUNT(*)', 'count')
       .where('wp.companyId = :companyId', { companyId })
-      .andWhere('wp.employeeId IS NOT NULL')
+      .andWhere('wp.userId IS NOT NULL')
       .andWhere('wp.recommendedBinType IS NOT NULL')
-      .groupBy('wp.employeeId')
+      .groupBy('wp.userId')
       .orderBy('count', 'DESC')
       .limit(limit)
-      .getRawMany<{ employeeId: string; count: string }>();
+      .getRawMany<{ userId: string; count: string }>();
 
-    const employeeIds = rows.map((row) => row.employeeId);
-    if (employeeIds.length === 0) {
+    const userIds = rows.map((row) => row.userId);
+    if (userIds.length === 0) {
       return [];
     }
 
-    const employees = await this.employeeRepository.findBy({
-      id: In(employeeIds),
+    const users = await this.userRepository.find({
+      where: { id: In(userIds) },
+      relations: ['logo'],
     });
-    const employeesById = new Map(employees.map((e) => [e.id, e]));
+    const usersById = new Map(users.map((u) => [u.id, u]));
 
     return rows
       .map<CompanyLeaderboardEntry | null>((row) => {
-        const employee = employeesById.get(row.employeeId);
-        if (!employee) {
+        const user = usersById.get(row.userId);
+        if (!user) {
           return null;
         }
         return {
-          employee,
+          employee: user,
           totalClassifiedPhotos: Number(row.count),
         };
       })

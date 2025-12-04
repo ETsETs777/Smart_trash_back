@@ -2,7 +2,7 @@ import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { BeforeInsert, Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { CompanyEntity } from './company.entity';
 import { AchievementCriterionType } from './achievement-criterion.enum';
-import { CompanyAdminEntity } from './company-admin.entity';
+import { UserEntity } from './user.entity';
 import { EmployeeAchievementEntity } from './employee-achievement.entity';
 
 @ObjectType({ description: 'Ачивка, которую может получить сотрудник' })
@@ -42,16 +42,16 @@ export class AchievementEntity {
   })
   company: CompanyEntity;
 
-  @Field(() => CompanyAdminEntity, {
+  @Field(() => UserEntity, {
     nullable: true,
-    description: 'Администратор, создавший ачивку',
+    description: 'Администратор компании, создавший ачивку',
   })
-  @ManyToOne(() => CompanyAdminEntity, (admin) => admin.createdAchievements, {
+  @ManyToOne(() => UserEntity, (user) => user.createdAchievements, {
     onDelete: 'SET NULL',
     nullable: true,
     eager: false,
   })
-  createdBy?: CompanyAdminEntity | null;
+  createdBy?: UserEntity | null;
 
   @Field(() => [EmployeeAchievementEntity], {
     nullable: true,

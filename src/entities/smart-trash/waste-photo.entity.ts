@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { BeforeInsert, Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { CompanyEntity } from './company.entity';
-import { EmployeeEntity } from './employee.entity';
+import { UserEntity } from './user.entity';
 import { CollectionAreaEntity } from './collection-area.entity';
 import { TrashBinType } from './trash-bin-type.enum';
 import { WastePhotoStatus } from './waste-photo-status.enum';
@@ -24,16 +24,16 @@ export class WastePhotoEntity {
   })
   company: CompanyEntity;
 
-  @Field(() => EmployeeEntity, {
+  @Field(() => UserEntity, {
     nullable: true,
-    description: 'Сотрудник, сделавший фотографию (может отсутствовать для незарегистрированных)',
+    description: 'Пользователь (сотрудник), сделавший фотографию',
   })
-  @ManyToOne(() => EmployeeEntity, (employee) => employee.wastePhotos, {
+  @ManyToOne(() => UserEntity, (user) => user.wastePhotos, {
     onDelete: 'SET NULL',
     nullable: true,
     eager: false,
   })
-  employee?: EmployeeEntity | null;
+  user?: UserEntity | null;
 
   @Field(() => CollectionAreaEntity, {
     nullable: true,

@@ -4,7 +4,7 @@ import { AchievementService } from '../services/achievement.service';
 import { AchievementCreateInput } from '../inputs/achievement-create.input';
 import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
-import { CurrentAdmin } from 'src/decorators/auth/current-admin.decorator';
+import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
 
 @Resolver(() => AchievementEntity)
@@ -14,13 +14,13 @@ export class AchievementResolver {
   @Mutation(() => AchievementEntity, {
     description: 'Создаёт новую ачивку в рамках выбранной компании',
   })
-  @Roles(AuthRole.COMPANY_ADMIN)
+  @Roles(AuthRole.ADMIN_COMPANY)
   createAchievement(
     @Args('input', {
       description: 'Данные для создания ачивки',
     })
     input: AchievementCreateInput,
-    @CurrentAdmin() _admin: JwtPayload | null,
+    @CurrentUser() _user: JwtPayload,
   ): Promise<AchievementEntity> {
     return this.achievementService.createAchievement(input);
   }

@@ -1,9 +1,11 @@
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
-import { GigaChat } from 'langchain-gigachat';
-import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
+import { Agent } from 'node:https';
+import Joi from 'joi';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
+import { LLMRequestService } from './services/llm-request.service';
+import { ConfigService } from '../config/config.service';
 
 interface ClassifyWasteArgs {
   imageBuffer?: Buffer;
@@ -31,24 +33,25 @@ interface GigaChatFileUploadResponse {
 @Injectable()
 export class GigachatService {
   private readonly logger = new Logger(GigachatService.name);
-  private readonly model: GigaChat;
   private readonly axiosClient: AxiosInstance;
   private readonly apiKey: string;
   private readonly baseUrl: string;
 
-  constructor() {
-    this.apiKey = process.env.GIGACHAT_API_KEY!;
-    this.baseUrl = process.env.GIGACHAT_BASE_URL || 'https://gigachat.devices.sberbank.ru/api/v1';
+  constructor(
+    private readonly llmRequestService: LLMRequestService,
+    private readonly configService: ConfigService,
+  ) {
+    const config = this.configService.config.gigachat;
+    this.apiKey = config.authKey;
+    this.baseUrl = config.baseUrl;
 
-    this.model = new GigaChat({
-      credentials: this.apiKey,
-      baseUrl: this.baseUrl,
-      model: process.env.GIGACHAT_MODEL || 'GigaChat',
-      temperature: 0,
+    const httpsAgent = new Agent({
+      rejectUnauthorized: config.rejectUnauthorized,
     });
 
     this.axiosClient = axios.create({
       baseURL: this.baseUrl,
+      httpsAgent,
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
       },
@@ -95,10 +98,15 @@ export class GigachatService {
   }
 
   async classifyWaste(args: ClassifyWasteArgs): Promise<ClassifyWasteResult> {
-    const systemPrompt =
-      'Ты эксперт по раздельному сбору отходов. Твоя задача – по изображению мусора выбрать один из заранее заданных типов контейнера.';
-
     const binsList = args.availableBinTypes.join(', ');
+
+    const systemPromptParts: string[] = [];
+    systemPromptParts.push(
+      'Ты эксперт по раздельному сбору отходов. Твоя задача – по изображению мусора выбрать один из заранее заданных типов контейнера.',
+    );
+    systemPromptParts.push(
+      this.llmRequestService.getComplianceWarningPrompt(),
+    );
 
     const humanPromptParts: string[] = [];
     humanPromptParts.push(
@@ -117,11 +125,9 @@ export class GigachatService {
     humanPromptParts.push(
       'Проанализируй изображение мусора и определи, в какой контейнер его следует выбросить.',
     );
-    humanPromptParts.push(
-      'Ответ верни строго в формате JSON: {"binType":"<ТИП_КОНТЕЙНЕРА>","explanation":"Краткое объяснение на русском"}.',
-    );
 
-    const humanPrompt = humanPromptParts.join(' ');
+    const systemPrompt = systemPromptParts.join('\n\n');
+    const userQuery = humanPromptParts.join(' ');
 
     let fileId: string | undefined;
 
@@ -130,13 +136,13 @@ export class GigachatService {
       fileId = await this.uploadFile(args.imageBuffer, fileName);
     }
 
-    let response;
+    let contentText: string;
 
     if (fileId) {
       const chatCompletionsResponse = await this.axiosClient.post(
         '/chat/completions',
         {
-          model: process.env.GIGACHAT_MODEL || 'GigaChat',
+          model: this.configService.config.gigachat.model,
           messages: [
             {
               role: 'system',
@@ -144,7 +150,7 @@ export class GigachatService {
             },
             {
               role: 'user',
-              content: humanPrompt,
+              content: userQuery,
               attachments: [fileId],
             },
           ],
@@ -157,60 +163,110 @@ export class GigachatService {
         throw new Error('GigaChat не вернул ответ в запросе с файлом');
       }
 
-      response = {
-        content: message.content || '',
-      };
+      contentText = message.content || '';
     } else {
-      response = await this.model.invoke([
-        new SystemMessage(systemPrompt),
-        new HumanMessage(humanPrompt),
-      ]);
+      contentText = await this.llmRequestService.request({
+        systemPrompt,
+        userQuery,
+      });
     }
 
-    const contentText =
-      typeof response.content === 'string'
-        ? response.content
-        : Array.isArray(response.content)
-        ? response.content.map((part) => (typeof part === 'string' ? part : JSON.stringify(part))).join(' ')
-        : JSON.stringify(response.content);
+    const schema = Joi.object({
+      binType: Joi.string()
+        .valid(...Object.values(TrashBinType))
+        .required(),
+      explanation: Joi.string().required(),
+    });
 
-    let recommended: TrashBinType | null = null;
-    let explanation = '';
+    const validation = this.llmRequestService.validateJsonResponse<{
+      binType: string;
+      explanation: string;
+    }>(contentText, schema);
 
-    try {
-      const jsonStart = contentText.indexOf('{');
-      const jsonEnd = contentText.lastIndexOf('}');
-      const jsonString =
-        jsonStart >= 0 && jsonEnd > jsonStart
-          ? contentText.substring(jsonStart, jsonEnd + 1)
-          : contentText;
-      const parsed = JSON.parse(jsonString) as {
-        binType?: string;
-        explanation?: string;
+    if (validation.isValid && validation.data) {
+      return {
+        recommendedBinType: validation.data.binType as TrashBinType,
+        explanation: validation.data.explanation,
+        raw: contentText,
       };
+    }
 
-      if (parsed.binType) {
-        const upper = parsed.binType.toUpperCase().trim();
-        const candidate = Object.values(TrashBinType).find(
-          (value) => value.toString().toUpperCase() === upper,
-        );
-        if (candidate) {
-          recommended = candidate;
+    const retryPrompt = 'Ответ должен быть строго в формате JSON: {"binType":"<ТИП_КОНТЕЙНЕРА>","explanation":"Краткое объяснение на русском"}. Тип контейнера должен быть одним из: ' + binsList + '.';
+
+    if (fileId) {
+      const retrySystemPrompt = `${systemPrompt}
+
+---
+
+${retryPrompt}
+
+ТВОЙ ПРЕДЫДУЩИЙ НЕПРАВИЛЬНЫЙ ОТВЕТ:
+
+${contentText}
+
+ИСПРАВЬ ЕГО СОГЛАСНО ИНСТРУКЦИЯМ ВЫШЕ!`;
+
+      const retryResponse = await this.axiosClient.post(
+        '/chat/completions',
+        {
+          model: this.configService.config.gigachat.model,
+          messages: [
+            {
+              role: 'system',
+              content: retrySystemPrompt,
+            },
+            {
+              role: 'user',
+              content: userQuery,
+              attachments: [fileId],
+            },
+          ],
+          temperature: 0,
+        },
+      );
+
+      const retryMessage = retryResponse.data?.choices?.[0]?.message;
+      if (retryMessage) {
+        const retryContentText = retryMessage.content || '';
+        const retryValidation = this.llmRequestService.validateJsonResponse<{
+          binType: string;
+          explanation: string;
+        }>(retryContentText, schema);
+
+        if (retryValidation.isValid && retryValidation.data) {
+          return {
+            recommendedBinType: retryValidation.data.binType as TrashBinType,
+            explanation: retryValidation.data.explanation,
+            raw: retryContentText,
+          };
         }
       }
-      if (parsed.explanation) {
-        explanation = parsed.explanation;
-      }
-    } catch {
-      explanation = contentText;
+
+      throw new Error(
+        `Не удалось классифицировать мусор после 2 попыток. Ошибка: ${validation.error}`,
+      );
     }
 
+    const validatedResult = await this.llmRequestService.requestAndValidate<{
+      binType: string;
+      explanation: string;
+    }>({
+      systemPrompt,
+      userQuery,
+      retryPromptBuilder: () => retryPrompt,
+      validator: (response) =>
+        this.llmRequestService.validateJsonResponse(response, schema),
+      errorMessage: 'Не удалось классифицировать мусор',
+      logPrefix: 'классификация мусора',
+    });
+
     return {
-      recommendedBinType: recommended,
-      explanation,
+      recommendedBinType: validatedResult.binType as TrashBinType,
+      explanation: validatedResult.explanation,
       raw: contentText,
     };
   }
 }
+
 
 

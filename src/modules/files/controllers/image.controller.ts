@@ -101,6 +101,7 @@ export class ImageController {
    * @return ImageStoreEntity.
    */
   @Post(ImageEndpoints.childImageUpload)
+  @Public()
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(
     @UploadedFile('file', ...ImageController.IMAGE_PIPES)

@@ -20,7 +20,7 @@ export const CurrentAdmin = createParamDecorator(
       );
     }
 
-    if (user.role !== AuthRole.COMPANY_ADMIN) {
+    if (user.role !== AuthRole.ADMIN_COMPANY) {
       throw new ForbiddenException(
         'Доступ к этому ресурсу разрешен только администраторам компаний',
       );

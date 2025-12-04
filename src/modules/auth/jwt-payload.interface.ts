@@ -4,7 +4,6 @@ export interface JwtPayload {
   sub: string;
   role: AuthRole;
   companyId?: string;
-  employeeId?: string;
 }
 
 

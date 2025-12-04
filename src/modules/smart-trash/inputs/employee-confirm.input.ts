@@ -10,6 +10,11 @@ export class EmployeeConfirmInput {
   })
   employeeId: string;
 
+  @Field(() => ID, {
+    description: 'Идентификатор компании',
+  })
+  companyId: string;
+
   @Field({
     description:
       'Флаг подтверждения сотрудника администратором компании (true – сотрудник подтверждён)',

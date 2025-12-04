@@ -1,45 +1,44 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { EmployeeEntity } from 'src/entities/smart-trash/employee.entity';
+import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { EmployeeCreateInput } from '../inputs/employee-create.input';
 import { EmployeeConfirmInput } from '../inputs/employee-confirm.input';
 import { EmployeeService } from '../services/employee.service';
 import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
-import { CurrentAdmin } from 'src/decorators/auth/current-admin.decorator';
+import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
 
-@Resolver(() => EmployeeEntity)
+@Resolver(() => UserEntity)
 export class EmployeeResolver {
   constructor(private readonly employeeService: EmployeeService) {}
 
-  @Mutation(() => EmployeeEntity, {
-    description: 'Создаёт нового сотрудника компании',
+  @Mutation(() => UserEntity, {
+    description:
+      'Создаёт нового сотрудника компании. Отправляет письмо подтверждения на email',
   })
-  @Roles(AuthRole.COMPANY_ADMIN)
+  @Roles(AuthRole.ADMIN_COMPANY)
   createEmployee(
     @Args('input', {
       description: 'Данные сотрудника и идентификатор компании',
     })
     input: EmployeeCreateInput,
-    @CurrentAdmin() _admin: JwtPayload | null,
-  ): Promise<EmployeeEntity> {
-    return this.employeeService.createEmployee(input);
+    @CurrentUser() user: JwtPayload,
+  ): Promise<UserEntity> {
+    return this.employeeService.createEmployee(input, user);
   }
 
-  @Mutation(() => EmployeeEntity, {
+  @Mutation(() => UserEntity, {
     description:
       'Подтверждает, что сотрудник действительно относится к компании (не случайный прохожий)',
   })
-  @Roles(AuthRole.COMPANY_ADMIN)
+  @Roles(AuthRole.ADMIN_COMPANY)
   confirmEmployee(
     @Args('input', {
       description: 'Данные для подтверждения сотрудника',
     })
     input: EmployeeConfirmInput,
-    @CurrentAdmin() _admin: JwtPayload | null,
-  ): Promise<EmployeeEntity> {
-    return this.employeeService.confirmEmployee(input);
+    @CurrentUser() user: JwtPayload,
+  ): Promise<UserEntity> {
+    return this.employeeService.confirmEmployee(input, user);
   }
 }
-
-
