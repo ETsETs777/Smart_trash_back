@@ -32,7 +32,7 @@ export class EmailService {
     token: string,
   ): Promise<void> {
     const smtpConfig = this.configService.config.smtp;
-    const baseUrl = this.configService.config.filesUrl.replace('/files/', '');
+    const baseUrl = this.configService.config.publicApiUrl;
     const confirmationUrl = `${baseUrl}/confirm-email?token=${token}`;
 
     const mailOptions: nodemailer.SendMailOptions = {

@@ -32,6 +32,10 @@ export interface IJsonConfig {
    */
   remoteAuthGqlUrl: string;
   /**
+   * Public API URL для формирования ссылок в письмах
+   */
+  publicApiUrl: string;
+  /**
    * JWT auth options
    */
   jwtToken: {
@@ -195,6 +199,11 @@ export class ConfigService {
       GIGACHAT_BASE_URL: joi.string().optional(),
       GIGACHAT_AUTH_URL: joi.string().optional(),
       GIGACHAT_MODEL: joi.string().optional().default('gigachat'),
+      PUBLIC_API_URL: joi
+        .string()
+        .uri()
+        .optional()
+        .default('http://localhost:5000'),
     })
     .required();
 
@@ -206,6 +215,10 @@ export class ConfigService {
     port: joi.forbidden().default(process.env.SERVER_PORT),
     filesUrl: joi.string().optional().default('/files/'),
     imagesUrl: joi.string().optional().default('/images/'),
+    publicApiUrl: joi
+      .forbidden()
+      .default(process.env.PUBLIC_API_URL || 'http://localhost:5000'),
+    remoteAuthGqlUrl: joi.string().optional().default(''),
     jwtToken: joi.forbidden().default({
       secret: process.env.JWT_TOKEN_SECRET,
       userTokenExpiresIn: process.env.JWT_USER_TOKEN_EXPIRES_IN,
