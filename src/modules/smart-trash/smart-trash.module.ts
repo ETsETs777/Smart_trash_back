@@ -25,6 +25,7 @@ import { CollectionAreaBinResolver } from './resolvers/collection-area-bin.resol
 import { WastePhotoResolver } from './resolvers/waste-photo.resolver';
 import { AnalyticsResolver } from './resolvers/analytics.resolver';
 import { AchievementResolver } from './resolvers/achievement.resolver';
+import { BarcodeResolver } from './resolvers/barcode.resolver';
 import { CompanyService } from './services/company.service';
 import { CompanyResolver } from './resolvers/company.resolver';
 import { UserService } from './services/user.service';
@@ -69,6 +70,7 @@ import { EmployeeService } from './services/employee.service';
     CompanyResolver,
     UserResolver,
     EmployeeResolver,
+    BarcodeResolver,
   ],
 })
 export class SmartTrashModule {}

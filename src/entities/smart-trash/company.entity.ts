@@ -85,10 +85,21 @@ export class CompanyEntity {
   })
   logo?: ImageEntity | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'QR код компании (обычно равен ID, но может быть кастомным)',
+  })
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  qrCode?: string | null;
+
   @BeforeInsert()
   normalizeName(): void {
     if (this.name) {
       this.name = this.name.trim();
+    }
+    // Если qrCode не задан, используем ID (будет установлен после сохранения)
+    if (!this.qrCode) {
+      // Установим после сохранения в сервисе
     }
   }
 }

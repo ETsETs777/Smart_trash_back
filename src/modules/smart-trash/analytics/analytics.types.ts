@@ -82,6 +82,12 @@ export class CompanyAnalyticsSummary {
     description: 'Статистика по областям сбора мусора',
   })
   areas: CollectionAreaStats[];
+
+  @Field(() => Date, { nullable: true })
+  dateFrom?: Date | null;
+
+  @Field(() => Date, { nullable: true })
+  dateTo?: Date | null;
 }
 
 

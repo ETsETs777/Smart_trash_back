@@ -17,8 +17,12 @@ export class AnalyticsResolver {
       description: 'Идентификатор компании, для которой требуется аналитика',
     })
     companyId: string,
+    @Args('dateFrom', { nullable: true, description: 'Дата начала фильтра' })
+    dateFrom?: Date,
+    @Args('dateTo', { nullable: true, description: 'Дата окончания фильтра' })
+    dateTo?: Date,
   ): Promise<CompanyAnalyticsSummary> {
-    return this.analyticsService.getCompanyAnalytics(companyId);
+    return this.analyticsService.getCompanyAnalytics(companyId, { dateFrom, dateTo });
   }
 }
 

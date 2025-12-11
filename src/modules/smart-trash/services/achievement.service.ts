@@ -61,6 +61,31 @@ export class AchievementService {
     });
   }
 
+  async updateAchievement(
+    id: string,
+    data: { title?: string; description?: string | null; threshold?: number },
+  ): Promise<AchievementEntity> {
+    const ach = await this.achievementRepository.findOne({
+      where: { id },
+    });
+    if (!ach) {
+      throw new NotFoundException('Ачивка не найдена');
+    }
+    if (data.title !== undefined) ach.title = data.title;
+    if (data.description !== undefined) ach.description = data.description ?? null;
+    if (data.threshold !== undefined && data.threshold !== null) ach.threshold = data.threshold;
+    return this.achievementRepository.save(ach);
+  }
+
+  async deleteAchievement(id: string): Promise<boolean> {
+    const ach = await this.achievementRepository.findOne({ where: { id } });
+    if (!ach) {
+      throw new NotFoundException('Ачивка не найдена');
+    }
+    await this.achievementRepository.delete({ id });
+    return true;
+  }
+
   async checkAndGrantForEmployeeByPhoto(
     wastePhoto: WastePhotoEntity,
   ): Promise<EmployeeAchievementEntity[]> {

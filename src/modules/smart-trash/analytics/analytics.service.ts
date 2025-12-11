@@ -23,12 +23,17 @@ export class AnalyticsService {
     private readonly areaRepository: Repository<CollectionAreaEntity>,
   ) {}
 
-  async getCompanyAnalytics(companyId: string): Promise<CompanyAnalyticsSummary> {
+  async getCompanyAnalytics(
+    companyId: string,
+    params?: { dateFrom?: Date; dateTo?: Date },
+  ): Promise<CompanyAnalyticsSummary> {
+    const dateFrom = params?.dateFrom;
+    const dateTo = params?.dateTo;
     const [binUsage, leaderboard, hallOfFame, areas] = await Promise.all([
-      this.getCompanyBinUsage(companyId),
-      this.getCompanyLeaderboard(companyId, 10),
-      this.getCompanyLeaderboard(companyId, 3),
-      this.getCompanyAreaStats(companyId),
+      this.getCompanyBinUsage(companyId, dateFrom, dateTo),
+      this.getCompanyLeaderboard(companyId, 10, dateFrom, dateTo),
+      this.getCompanyLeaderboard(companyId, 3, dateFrom, dateTo),
+      this.getCompanyAreaStats(companyId, dateFrom, dateTo),
     ]);
 
     return {
@@ -40,13 +45,19 @@ export class AnalyticsService {
     };
   }
 
-  async getCompanyBinUsage(companyId: string): Promise<CompanyBinUsageStats[]> {
+  async getCompanyBinUsage(
+    companyId: string,
+    dateFrom?: Date,
+    dateTo?: Date,
+  ): Promise<CompanyBinUsageStats[]> {
     const rows = await this.wastePhotoRepository
       .createQueryBuilder('wp')
       .select('wp.recommendedBinType', 'binType')
       .addSelect('COUNT(*)', 'count')
       .where('wp.companyId = :companyId', { companyId })
       .andWhere('wp.recommendedBinType IS NOT NULL')
+      .andWhere(dateFrom ? 'wp.createdAt >= :dateFrom' : '1=1', { dateFrom })
+      .andWhere(dateTo ? 'wp.createdAt <= :dateTo' : '1=1', { dateTo })
       .groupBy('wp.recommendedBinType')
       .orderBy('count', 'DESC')
       .getRawMany<{ binType: TrashBinType; count: string }>();
@@ -60,6 +71,8 @@ export class AnalyticsService {
   async getCompanyLeaderboard(
     companyId: string,
     limit: number,
+    dateFrom?: Date,
+    dateTo?: Date,
   ): Promise<CompanyLeaderboardEntry[]> {
     const rows = await this.wastePhotoRepository
       .createQueryBuilder('wp')
@@ -68,6 +81,8 @@ export class AnalyticsService {
       .where('wp.companyId = :companyId', { companyId })
       .andWhere('wp.userId IS NOT NULL')
       .andWhere('wp.recommendedBinType IS NOT NULL')
+      .andWhere(dateFrom ? 'wp.createdAt >= :dateFrom' : '1=1', { dateFrom })
+      .andWhere(dateTo ? 'wp.createdAt <= :dateTo' : '1=1', { dateTo })
       .groupBy('wp.userId')
       .orderBy('count', 'DESC')
       .limit(limit)
@@ -98,13 +113,19 @@ export class AnalyticsService {
       .filter((entry): entry is CompanyLeaderboardEntry => entry !== null);
   }
 
-  async getCompanyAreaStats(companyId: string): Promise<CollectionAreaStats[]> {
+  async getCompanyAreaStats(
+    companyId: string,
+    dateFrom?: Date,
+    dateTo?: Date,
+  ): Promise<CollectionAreaStats[]> {
     const rows = await this.wastePhotoRepository
       .createQueryBuilder('wp')
       .select('wp.collectionAreaId', 'areaId')
       .addSelect('COUNT(*)', 'count')
       .where('wp.companyId = :companyId', { companyId })
       .andWhere('wp.collectionAreaId IS NOT NULL')
+      .andWhere(dateFrom ? 'wp.createdAt >= :dateFrom' : '1=1', { dateFrom })
+      .andWhere(dateTo ? 'wp.createdAt <= :dateTo' : '1=1', { dateTo })
       .groupBy('wp.collectionAreaId')
       .orderBy('count', 'DESC')
       .getRawMany<{ areaId: string; count: string }>();

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
@@ -203,6 +203,38 @@ export class CompanyService {
       }
     } else {
       throw new ForbiddenException('Недостаточно прав для доступа к компании');
+    }
+
+    return company;
+  }
+
+  async getCompanyByQRCode(qrCode: string): Promise<CompanyEntity> {
+    // Сначала пытаемся найти по qrCode полю
+    let company = await this.companyRepository.findOne({
+      where: { qrCode },
+      relations: ['logo'],
+    });
+
+    // Если не найдено, пытаемся найти по ID (для обратной совместимости)
+    if (!company) {
+      company = await this.companyRepository.findOne({
+        where: { id: qrCode },
+        relations: ['logo'],
+      });
+    }
+
+    if (!company) {
+      throw new NotFoundException('Компания с указанным QR кодом не найдена');
+    }
+
+    if (!company.isActive) {
+      throw new BadRequestException('Компания неактивна');
+    }
+
+    // Если qrCode не был установлен, устанавливаем его для будущих запросов
+    if (!company.qrCode) {
+      company.qrCode = company.id;
+      await this.companyRepository.save(company);
     }
 
     return company;

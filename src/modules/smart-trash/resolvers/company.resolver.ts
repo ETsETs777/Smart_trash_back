@@ -7,6 +7,7 @@ import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
+import { Public } from 'src/decorators/auth/public.decorator';
 
 @Resolver(() => CompanyEntity)
 export class CompanyResolver {
@@ -78,6 +79,19 @@ export class CompanyResolver {
     @CurrentUser() user: JwtPayload,
   ): Promise<CompanyEntity> {
     return this.companyService.getCompanyByIdForCurrentUser(id, user);
+  }
+
+  @Query(() => CompanyEntity, {
+    description: 'Возвращает компанию по QR коду. Доступно без авторизации для сканирования',
+  })
+  @Public()
+  companyByQR(
+    @Args('qrCode', {
+      description: 'QR код компании',
+    })
+    qrCode: string,
+  ): Promise<CompanyEntity> {
+    return this.companyService.getCompanyByQRCode(qrCode);
   }
 }
 
