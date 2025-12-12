@@ -6,6 +6,10 @@ import { LoginInput } from './inputs/login.input';
 import { AdminRegisterInput } from './inputs/admin-register.input';
 import { EmployeeRegisterInput } from './inputs/employee-register-new.input';
 import { ConfirmEmailInput } from './inputs/confirm-email.input';
+import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
+import { JwtPayload } from './jwt-payload.interface';
+import { Roles } from './roles.decorator';
+import { AuthRole } from './auth-role.enum';
 
 @Resolver(() => UserEntity)
 export class AuthResolver {
@@ -65,5 +69,13 @@ export class AuthResolver {
     input: ConfirmEmailInput,
   ): Promise<UserEntity> {
     return this.authService.confirmEmail(input);
+  }
+
+  @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  @Query(() => UserEntity, {
+    description: 'Текущий пользователь (email, роль, компания, логотип)',
+  })
+  me(@CurrentUser() user: JwtPayload): Promise<UserEntity> {
+    return this.authService.me(user);
   }
 }

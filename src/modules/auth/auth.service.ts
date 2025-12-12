@@ -293,6 +293,17 @@ export class AuthService {
     return userWithRelations;
   }
 
+  async me(payload: JwtPayload): Promise<UserEntity> {
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      relations: ['logo', 'employeeCompanies', 'employeeCompanies.logo', 'createdCompanies', 'createdCompanies.logo'],
+    });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+    return user;
+  }
+
   async confirmEmail(input: ConfirmEmailInput): Promise<UserEntity> {
     const user = await this.userRepository.findOne({
       where: { emailConfirmationToken: input.token },
