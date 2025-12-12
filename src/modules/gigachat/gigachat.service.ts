@@ -2,6 +2,7 @@ import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import { Agent } from 'node:https';
+import * as crypto from 'node:crypto';
 import Joi from 'joi';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
 import { LLMRequestService } from './services/llm-request.service';
@@ -34,16 +35,26 @@ interface GigaChatFileUploadResponse {
 export class GigachatService {
   private readonly logger = new Logger(GigachatService.name);
   private readonly axiosClient: AxiosInstance;
-  private readonly apiKey: string;
+  private readonly clientId: string;
+  private readonly clientSecret: string;
   private readonly baseUrl: string;
+  private readonly tokenUrl: string;
+  private accessToken: string | null = null;
+  private tokenExpiresAt: number = 0;
 
   constructor(
     private readonly llmRequestService: LLMRequestService,
     private readonly configService: ConfigService,
   ) {
     const config = this.configService.config.gigachat;
-    this.apiKey = config.authKey;
+    const apiKey = config.authKey;
     this.baseUrl = config.baseUrl;
+    this.tokenUrl = config.authUrl || 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
+
+    const decodedKey = Buffer.from(apiKey, 'base64').toString('utf-8');
+    const [clientId, clientSecret] = decodedKey.split(':');
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
 
     const httpsAgent = new Agent({
       rejectUnauthorized: config.rejectUnauthorized,
@@ -52,20 +63,71 @@ export class GigachatService {
     this.axiosClient = axios.create({
       baseURL: this.baseUrl,
       httpsAgent,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-      },
     });
+  }
+
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiresAt) {
+      return this.accessToken;
+    }
+
+    try {
+      const httpsAgent = new Agent({
+        rejectUnauthorized: this.configService.config.gigachat.rejectUnauthorized,
+      });
+
+      const authHeader = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+      
+      const params = new URLSearchParams();
+      params.append('scope', 'GIGACHAT_API_PERS');
+
+      const response = await axios.post(
+        this.tokenUrl,
+        params.toString(),
+        {
+          httpsAgent,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${authHeader}`,
+            'RqUID': crypto.randomUUID(),
+            'Accept': 'application/json',
+          },
+        },
+      );
+
+      const expiresIn = response.data?.expires_in;
+      if (typeof expiresIn === 'number' && expiresIn > 0) {
+        this.tokenExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+      } else {
+        this.logger.warn('Неверное значение expires_in, используем значение по умолчанию 1 час');
+        this.tokenExpiresAt = Date.now() + 3600 * 1000;
+      }
+
+      this.accessToken = response.data?.access_token;
+      if (!this.accessToken) {
+        throw new Error('Не удалось получить access_token от GigaChat');
+      }
+
+      this.logger.log('OAuth токен успешно получен от GigaChat');
+      return this.accessToken;
+    } catch (error) {
+      this.logger.error(`Ошибка получения OAuth токена: ${error.message}`, error.stack);
+      throw new InternalServerErrorException(
+        `Не удалось получить OAuth токен от GigaChat: ${error.message}`,
+      );
+    }
   }
 
   async uploadFile(fileBuffer: Buffer, fileName: string): Promise<string> {
     try {
+      const accessToken = await this.getAccessToken();
+      
       const formData = new FormData();
       formData.append('file', fileBuffer, {
         filename: fileName,
         contentType: 'image/jpeg',
       });
-      formData.append('purpose', 'general');
+      formData.append('purpose', 'vision');
 
       const response = await this.axiosClient.post<GigaChatFileUploadResponse>(
         '/files',
@@ -73,6 +135,7 @@ export class GigachatService {
         {
           headers: {
             ...formData.getHeaders(),
+            Authorization: `Bearer ${accessToken}`,
           },
         },
       );
@@ -139,6 +202,8 @@ export class GigachatService {
     let contentText: string;
 
     if (fileId) {
+      const accessToken = await this.getAccessToken();
+      
       const chatCompletionsResponse = await this.axiosClient.post(
         '/chat/completions',
         {
@@ -155,6 +220,11 @@ export class GigachatService {
             },
           ],
           temperature: 0,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
       );
 
@@ -206,6 +276,8 @@ ${contentText}
 
 ИСПРАВЬ ЕГО СОГЛАСНО ИНСТРУКЦИЯМ ВЫШЕ!`;
 
+      const accessToken = await this.getAccessToken();
+      
       const retryResponse = await this.axiosClient.post(
         '/chat/completions',
         {
@@ -222,6 +294,11 @@ ${contentText}
             },
           ],
           temperature: 0,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
       );
 
