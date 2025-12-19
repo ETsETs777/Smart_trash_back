@@ -72,7 +72,7 @@ export class AchievementService {
       throw new NotFoundException('Ачивка не найдена');
     }
     if (data.title !== undefined) ach.title = data.title;
-    if (data.description !== undefined) ach.description = data.description ?? null;
+    if (data.description !== undefined) ach.description = data.description ?? '';
     if (data.threshold !== undefined && data.threshold !== null) ach.threshold = data.threshold;
     return this.achievementRepository.save(ach);
   }

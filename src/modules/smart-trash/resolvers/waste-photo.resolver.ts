@@ -47,13 +47,13 @@ export class WastePhotoResolver {
   })
   @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
   wastePhotos(
+    @CurrentUser() user: JwtPayload,
     @Args('companyId', { type: () => ID }) companyId: string,
     @Args('userId', { type: () => ID, nullable: true }) userId: string | null,
     @Args('skip', { type: () => Int, nullable: true }) skip?: number,
     @Args('take', { type: () => Int, nullable: true }) take?: number,
     @Args('dateFrom', { nullable: true }) dateFrom?: Date,
     @Args('dateTo', { nullable: true }) dateTo?: Date,
-    @CurrentUser() user: JwtPayload,
   ): Promise<WastePhotoEntity[]> {
     return this.wastePhotoService.findMany({ companyId, userId, skip, take, dateFrom, dateTo, currentUser: user });
   }

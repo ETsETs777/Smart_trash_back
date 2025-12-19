@@ -1,264 +1,244 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Smart Trash Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend приложение для системы управления сортировкой отходов, построенное на NestJS с GraphQL API.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Технологии
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
-
-```bash
-$ npm install
-```
-
-## Running the app
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
-
-# Rentesy App Template
-
-NestJS приложение с поддержкой файлов, изображений и GraphQL API.
-
-## 🚀 Быстрый старт
-
-### Docker Compose (Разработка)
-
-Запуск полного стека для разработки:
-
-```bash
-# Запуск всех сервисов
-docker-compose -f docker-compose.dev.yml up -d
-
-# Просмотр логов
-docker-compose -f docker-compose.dev.yml logs -f app
-
-# Остановка
-docker-compose -f docker-compose.dev.yml down
-```
-
-**Доступные сервисы:**
-
-- Приложение: http://localhost:3000
-- GraphQL Playground: http://localhost:3000/graphql
-- MinIO Console: http://localhost:9001 (admin: 12356789 / 12345678)
-- PostgreSQL: localhost:5432
-
-### Kubernetes
-
-#### Предварительные требования
-
-- Kubernetes кластер (minikube, kind, или облачный)
-- kubectl
-- NGINX Ingress Controller (опционально)
-
-#### Развертывание
-
-```bash
-# Переход в директорию k8s
-cd k8s
-
-# Сделать скрипт исполняемым
-chmod +x deploy.sh
-
-# Запуск развертывания
-./deploy.sh
-```
-
-#### Ручное развертывание
-
-```bash
-cd k8s
-
-# 1. Создание namespace
-kubectl apply -f namespace.yaml
-
-# 2. Конфигурация
-kubectl apply -f configmap.yaml
-kubectl apply -f secret.yaml
-
-# 3. База данных
-kubectl apply -f postgres.yaml
-
-# 4. Хранилище файлов
-kubectl apply -f minio.yaml
-
-# 5. Приложение
-kubectl apply -f app.yaml
-
-# 6. Автомасштабирование
-kubectl apply -f hpa.yaml
-
-# 7. Ingress (опционально)
-kubectl apply -f ingress.yaml
-```
-
-#### Доступ к сервисам
-
-**С Ingress:**
-
-- Приложение: http://rentesy-app.local
-- MinIO Console: http://minio.rentesy-app.local
-
-**Через NodePort:**
-
-- Приложение: http://localhost:30300
-- MinIO Console: http://localhost:30901
-- MinIO API: http://localhost:30900
-
-#### Полезные команды
-
-```bash
-# Статус всех ресурсов
-kubectl get all -n rentesy-app
-
-# Логи приложения
-kubectl logs -f deployment/rentesy-app-deployment -n rentesy-app
-
-# Подключение к поду
-kubectl exec -it deployment/rentesy-app-deployment -n rentesy-app -- /bin/sh
-
-# Удаление всех ресурсов
-kubectl delete namespace rentesy-app
-```
-
-## 🏗️ Архитектура
-
-### Компоненты
-
-- **NestJS App** - основное приложение
+- **NestJS** - Node.js фреймворк
+- **GraphQL** - API с Apollo Server
+- **TypeORM** - ORM для работы с PostgreSQL
 - **PostgreSQL** - база данных
 - **MinIO** - S3-совместимое хранилище файлов
+- **Redis** - кэширование и очереди (BullMQ)
+- **GigaChat** - AI для классификации отходов
+- **JWT** - аутентификация
+- **Docker** - контейнеризация
 
-### Порты
+## Требования
 
-- **3000** - NestJS приложение
-- **5432** - PostgreSQL
-- **9000** - MinIO API
-- **9001** - MinIO Console
+- Node.js 18+ 
+- npm или yarn
+- Docker и Docker Compose
+- PostgreSQL 15+ (через Docker)
 
-## 🔧 Конфигурация
+## Установка и запуск
 
-### Переменные окружения
+### 1. Установка зависимостей
 
 ```bash
-# База данных
+npm install
+```
+
+### 2. Настройка переменных окружения
+
+Создайте файл `.env.dev` в корне проекта (или скопируйте из `dev.env`):
+
+```env
+NODE_ENV=dev
+SERVER_PORT=5000
+JWT_TOKEN_SECRET=dev-secret-key-change-in-production
+JWT_USER_TOKEN_EXPIRES_IN=7d
+
+# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=1qa2ws3ed
-DB_DATABASE=rentesy-app-template-dev
+DB_DATABASE=smart_trash_app_template_dev
 
-# S3 хранилище
+# S3 (MinIO)
 S3_ENDPOINT=localhost
 S3_PORT=9000
-S3_ACCESS_KEY=12356789
+S3_ACCESS_KEY=12345678
 S3_SECRET_KEY=12345678
-S3_BUCKET_NAME=rentesy-bucket
+S3_BUCKET_NAME=smart-trash
 
-# Приложение
-NODE_ENV=dev
-SERVER_PORT=3000
-JWT_TOKEN_SECRET=dev-secret-key
-JWT_USER_TOKEN_EXPIRES_IN=7d
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# SMTP (опционально для разработки)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-password
+SMTP_FROM=your-email@gmail.com
+
+# GigaChat
+GIGACHAT_API_KEY=your-api-key
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
+GIGACHAT_REJECT_UNAUTHORIZED=false
+GIGACHAT_BASE_URL=https://ngw.devices.sberbank.ru:9443/api/v2
+GIGACHAT_AUTH_URL=https://ngw.devices.sberbank.ru:9443/api/v2/oauth
+GIGACHAT_MODEL=GigaChat
+
+# Public API URL
+PUBLIC_API_URL=http://localhost:5000
 ```
 
-## 📦 Сборка Docker образа
+### 3. Запуск Docker контейнеров
+
+Из корневой директории проекта (где находится `docker-compose.yml`):
 
 ```bash
-# Development
-docker build -f Dockerfile.dev -t rentesy-app:dev .
-
-# Production
-docker build -t rentesy-app:latest .
+cd ../..
+docker-compose up -d postgres minio redis
 ```
 
-## 🔄 CI/CD
+Это запустит:
+- **PostgreSQL** на порту `5432`
+- **MinIO** на портах `9000` (API) и `9001` (Console)
+- **Redis** на порту `6379`
 
-GitHub Actions автоматически выполняет:
+### 4. Создание базы данных
 
-1. **Lint** - проверка кода
-2. **Build** - сборка приложения
-3. **E2E Tests** - интеграционные тесты
-
-## 📝 API
-
-- **REST API** - стандартные HTTP эндпоинты
-- **GraphQL** - `/graphql` эндпоинт с Playground
-- **File Upload** - `/files/upload` и `/images/upload`
-
-## 🛠️ Разработка
+После запуска PostgreSQL, создайте базу данных:
 
 ```bash
-# Установка зависимостей
-npm install
+docker exec smart-trash-postgres psql -U postgres -c "CREATE DATABASE smart_trash_app_template_dev OWNER postgres;"
+```
 
-# Запуск в режиме разработки
+### 5. Запуск бэкенда
+
+#### Режим разработки (с hot-reload):
+
+```bash
 npm run start:dev
+```
+
+Приложение будет доступно на `http://localhost:5000`
+
+#### Другие команды:
+
+```bash
+# Production режим
+npm run start:prod
+
+# Debug режим
+npm run start:debug
 
 # Сборка
 npm run build
+```
 
-# Тесты
+## API Endpoints
+
+### GraphQL
+
+- **Playground**: http://localhost:5000/graphql
+- **API**: http://localhost:5000/graphql
+
+### REST API
+
+- **Health check**: `GET /`
+- **Email confirmation**: `GET /confirm-email?token=...`
+- **Images**: 
+  - `GET /images/:id` - получить изображение
+  - `POST /images/upload` - загрузить изображение
+- **Files**: 
+  - `GET /files/:id` - получить файл
+  - `POST /files/upload` - загрузить файл
+
+## Структура проекта
+
+```
+src/
+├── entities/          # TypeORM сущности
+│   ├── files/         # Файлы и изображения
+│   └── smart-trash/   # Доменные сущности
+├── modules/           # Модули приложения
+│   ├── auth/          # Аутентификация и авторизация
+│   ├── config/        # Конфигурация
+│   ├── files/         # Работа с файлами
+│   ├── gigachat/      # Интеграция с GigaChat
+│   └── smart-trash/   # Основной бизнес-логика
+│       ├── resolvers/ # GraphQL резолверы
+│       ├── services/   # Сервисы
+│       └── queues/    # Очереди BullMQ
+├── decorators/        # Кастомные декораторы
+├── common/            # Общие утилиты
+└── main.ts            # Точка входа
+```
+
+## Основные функции
+
+- ✅ Регистрация и аутентификация (JWT)
+- ✅ Управление компаниями
+- ✅ Управление сотрудниками
+- ✅ Классификация отходов через GigaChat AI
+- ✅ Геймификация (достижения, рейтинг)
+- ✅ Аналитика и статистика
+- ✅ Загрузка и хранение файлов (MinIO)
+- ✅ Email подтверждение
+
+## Миграции базы данных
+
+TypeORM автоматически создает таблицы при запуске (`synchronize: true` в dev режиме).
+
+Для production используйте миграции:
+
+```bash
+# Создать миграцию
+npm run migration:create
+
+# Сгенерировать миграцию
+npm run migration:generate
+
+# Применить миграции
+npm run migration:run
+
+# Откатить миграцию
+npm run migration:revert
+```
+
+## Тестирование
+
+```bash
+# Unit тесты
 npm run test
+
+# E2E тесты
 npm run test:e2e
 
-# Линтер
-npm run lint:fix
+# Покрытие кода
+npm run test:cov
 ```
+
+## Troubleshooting
+
+### Ошибка подключения к базе данных
+
+1. Убедитесь, что Docker контейнеры запущены:
+   ```bash
+   docker ps
+   ```
+
+2. Проверьте, что база данных создана:
+   ```bash
+   docker exec smart-trash-postgres psql -U postgres -c "\l"
+   ```
+
+3. Проверьте переменные окружения в `.env.dev`
+
+### Ошибка подключения к MinIO
+
+1. Проверьте, что MinIO запущен:
+   ```bash
+   docker ps | grep minio
+   ```
+
+2. Откройте MinIO Console: http://localhost:9001
+   - Логин: `12345678`
+   - Пароль: `12345678`
+
+### Ошибка подключения к Redis
+
+1. Проверьте статус Redis:
+   ```bash
+   docker exec smart-trash-redis redis-cli ping
+   ```
+
+## Лицензия
+
+MIT

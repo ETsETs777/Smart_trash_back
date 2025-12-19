@@ -28,7 +28,7 @@ import { RolesGuard } from './modules/auth/roles.guard';
         db: Number(process.env.REDIS_DB || 0),
       },
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRoot({
       driver: ApolloDriver,
       installSubscriptionHandlers: true,
       playground: true,
