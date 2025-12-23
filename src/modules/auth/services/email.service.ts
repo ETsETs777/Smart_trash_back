@@ -85,14 +85,24 @@ export class EmailService {
       `,
     };
 
+    // Обёртываем в Promise с таймаутом, чтобы не блокировать регистрацию
+    const sendEmailPromise = this.transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email отправка превысила таймаут')), 5000);
+    });
+
     try {
-      const info = await this.transporter.sendMail(mailOptions);
+      const info = await Promise.race([sendEmailPromise, timeoutPromise]) as nodemailer.SentMessageInfo;
       this.logger.log(
         `Письмо подтверждения отправлено на ${email}. MessageId: ${info.messageId}`,
       );
     } catch (error) {
       this.logger.error(`Ошибка при отправке письма на ${email}:`, error);
-      throw error;
+      // Не выбрасываем ошибку, чтобы регистрация завершилась успешно
+      // Email можно отправить позже или пользователь может запросить повторную отправку
+      this.logger.warn(
+        `Регистрация завершена, но письмо подтверждения не отправлено. Токен подтверждения: ${token}`,
+      );
     }
   }
 

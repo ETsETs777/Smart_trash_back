@@ -26,7 +26,8 @@
     "migration:revert": "dotenv -c dev -- npm run typeorm -- migration:revert -d ./data-source.ts",
     "docker:up": "docker compose -f docker-compose.dev.yml --env-file .env.dev up -d",
     "docker:stop": "docker compose -f docker-compose.dev.yml stop",
-    "docker:down": "docker compose -f docker-compose.dev.yml down"
+    "docker:down": "docker compose -f docker-compose.dev.yml down",
+    "create:admin": "dotenv -c dev -- ts-node -r tsconfig-paths/register scripts/create-admin.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.11.2",

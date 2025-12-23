@@ -94,11 +94,14 @@ export class AuthService {
         relations: ['logo', 'createdCompanies', 'createdCompanies.logo'],
       });
 
-      await this.emailService.sendConfirmationEmail(
+      // Отправляем email асинхронно, не блокируя ответ
+      this.emailService.sendConfirmationEmail(
         normalizedEmail,
         userWithRelations.fullName,
         emailConfirmationToken,
-      );
+      ).catch((error) => {
+        this.logger.error(`Не удалось отправить email подтверждения для ${normalizedEmail}:`, error);
+      });
 
       this.logger.log(
         `Администратор ${normalizedEmail} повторно зарегистрирован (ожидает подтверждения)`,
@@ -130,11 +133,14 @@ export class AuthService {
       relations: ['logo', 'createdCompanies', 'createdCompanies.logo'],
     });
 
-    await this.emailService.sendConfirmationEmail(
+    // Отправляем email асинхронно, не блокируя ответ
+    this.emailService.sendConfirmationEmail(
       normalizedEmail,
       userWithRelations.fullName,
       emailConfirmationToken,
-    );
+    ).catch((error) => {
+      this.logger.error(`Не удалось отправить email подтверждения для ${normalizedEmail}:`, error);
+    });
 
     this.logger.log(
       `Администратор ${normalizedEmail} зарегистрирован (ожидает подтверждения)`,
