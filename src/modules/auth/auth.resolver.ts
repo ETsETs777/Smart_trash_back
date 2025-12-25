@@ -19,13 +19,7 @@ export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle([
-    {
-      name: 'register',
-      ttl: 3600000, // 1 hour
-      limit: 3, // 3 registrations per hour
-    },
-  ])
+  @Throttle({ default: { ttl: 3600000, limit: 3 } })
   @Mutation(() => UserEntity, {
     description:
       'Регистрация администратора компании. Создаёт компанию и пользователя с ролью ADMIN_COMPANY. Требует подтверждения email.',
@@ -40,13 +34,7 @@ export class AuthResolver {
   }
 
   @Public()
-  @Throttle([
-    {
-      name: 'register',
-      ttl: 3600000, // 1 hour
-      limit: 10, // 10 registrations per hour
-    },
-  ])
+  @Throttle({ default: { ttl: 3600000, limit: 10 } })
   @Mutation(() => UserEntity, {
     description:
       'Регистрация сотрудника компании. Создаёт пользователя с ролью EMPLOYEE. Требует подтверждения email.',
@@ -61,13 +49,7 @@ export class AuthResolver {
   }
 
   @Public()
-  @Throttle([
-    {
-      name: 'login',
-      ttl: 900000, // 15 minutes
-      limit: 5, // 5 attempts per 15 minutes
-    },
-  ])
+  @Throttle({ default: { ttl: 900000, limit: 5 } })
   @Mutation(() => UserEntity, {
     description:
       'Авторизация пользователя (администратора или сотрудника). Возвращает пользователя с установленным JWT токеном.',
@@ -96,13 +78,7 @@ export class AuthResolver {
   }
 
   @Public()
-  @Throttle([
-    {
-      name: 'refresh',
-      ttl: 60000, // 1 minute
-      limit: 10, // 10 refresh attempts per minute
-    },
-  ])
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Mutation(() => TokenResponse, {
     description: 'Обновление access токена с помощью refresh токена',
   })

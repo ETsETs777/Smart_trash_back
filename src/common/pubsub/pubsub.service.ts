@@ -10,5 +10,10 @@ export class PubSubService extends PubSub {
   constructor() {
     super();
   }
+
+  asyncIterator<T>(triggers: string | string[]): AsyncIterator<T> {
+    // @ts-ignore - asyncIterator exists on PubSub but TypeScript types may not reflect it
+    return super.asyncIterator(triggers);
+  }
 }
 

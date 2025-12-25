@@ -1,5 +1,5 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
-import { IsEnum, IsNumber, IsOptional, IsUUID, Min, Max } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsUUID, Min, Max, IsNotEmpty } from 'class-validator';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
 
 @InputType({

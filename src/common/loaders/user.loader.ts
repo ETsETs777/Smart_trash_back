@@ -44,7 +44,8 @@ export class UserLoader {
   }
 
   async loadMany(ids: string[]): Promise<(UserEntity | null)[]> {
-    return this.loader.loadMany(ids);
+    const results = await this.loader.loadMany(ids);
+    return results.map((result) => (result instanceof Error ? null : result));
   }
 }
 

@@ -7,11 +7,5 @@ import { Throttle } from '@nestjs/throttler';
  */
 export const ThrottleLogin = () =>
   SetMetadata('skipThrottle', false) &&
-  Throttle([
-    {
-      name: 'login',
-      ttl: 900000, // 15 minutes
-      limit: 5, // 5 attempts per 15 minutes
-    },
-  ]);
+  Throttle({ default: { ttl: 900000, limit: 5 } });
 

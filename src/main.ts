@@ -17,16 +17,54 @@ async function bootstrap() {
 
   const configService = await app.resolve(ConfigService);
 
+  // Enable cookie parser for CSRF tokens
+  app.use(cookieParser());
+
+  // Security headers with Helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+        scriptSrc: ["'self'"], // Only allow scripts from same origin
+        imgSrc: ["'self'", "data:", "https:"], // Allow images from same origin, data URIs, and HTTPS
+        connectSrc: ["'self'", "ws:", "wss:"], // Allow WebSocket connections
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Disable for development
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    dnsPrefetchControl: true,
+    frameguard: { action: 'deny' },
+    hidePoweredBy: true,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    ieNoOpen: true,
+    noSniff: true,
+    originAgentCluster: true,
+    permittedCrossDomainPolicies: false,
+    referrerPolicy: { policy: 'no-referrer' },
+    xssFilter: true,
+  }));
+
   app.enableCors({
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     origin: true,
     credentials: true,
+    exposedHeaders: ['X-CSRF-Token'], // Expose CSRF token header
   });
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Удаляет свойства, которых нет в DTO
-      forbidNonWhitelisted: true, // Выбрасывает ошибку при наличии лишних свойств
+      forbidNonWhitelisted: false, // Отключаем для GraphQL, так как GraphQL сам валидирует схему
       transform: true, // Автоматически преобразует типы
       transformOptions: {
         enableImplicitConversion: true,

@@ -423,4 +423,63 @@ export class AuthService {
       return null;
     }
   }
+
+  async refreshToken(input: RefreshTokenInput): Promise<{ accessToken: string; refreshToken: string }> {
+    // Verify the refresh token
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtService.verify<JwtPayload>(input.refreshToken, {
+        secret: this.configService.config.jwtToken.secret,
+      });
+    } catch (error) {
+      throw new UnauthorizedException('Невалидный или истекший refresh токен');
+    }
+
+    // Check if token type is refresh
+    if ((payload as any).type !== 'refresh') {
+      throw new UnauthorizedException('Токен не является refresh токеном');
+    }
+
+    // Find user and verify refresh token matches
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Пользователь не найден');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Аккаунт деактивирован');
+    }
+
+    if (user.refreshToken !== input.refreshToken) {
+      throw new UnauthorizedException('Невалидный refresh токен');
+    }
+
+    // Check if refresh token is expired
+    if (user.refreshTokenExpiresAt && user.refreshTokenExpiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh токен истек');
+    }
+
+    // Generate new tokens
+    const newAccessToken = this.generateAccessToken(payload);
+    const newRefreshToken = this.generateRefreshToken(payload);
+
+    // Update user tokens
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7);
+
+    user.jwtToken = newAccessToken;
+    user.refreshToken = newRefreshToken;
+    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
+    await this.userRepository.save(user);
+
+    this.logger.log(`Токены обновлены для пользователя ${user.email}`);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
 }
