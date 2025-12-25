@@ -174,6 +174,70 @@ export class WastePhotoService {
 
     return qb.getMany();
   }
+
+  async findManyWithPagination(params: {
+    companyId: string;
+    userId?: string | null;
+    page?: number;
+    pageSize?: number;
+    dateFrom?: Date;
+    dateTo?: Date;
+    currentUser: JwtPayload;
+  }): Promise<{ items: WastePhotoEntity[]; total: number; page: number; pageSize: number }> {
+    const { companyId, userId, page = 1, pageSize = 20, dateFrom, dateTo, currentUser } = params;
+    const skip = (page - 1) * pageSize;
+
+    // Проверка доступа: сотрудник/админ только своей компании
+    if (currentUser.role === AuthRole.EMPLOYEE && currentUser.companyId !== companyId) {
+      throw new BadRequestException('Нет доступа к истории этой компании');
+    }
+    if (currentUser.role === AuthRole.ADMIN_COMPANY && currentUser.companyId !== companyId) {
+      throw new BadRequestException('Нет доступа к истории этой компании');
+    }
+
+    // Build count query
+    const countQb = this.wastePhotoRepository
+      .createQueryBuilder('wp')
+      .where('wp.companyId = :companyId', { companyId });
+
+    if (userId) {
+      countQb.andWhere('wp.userId = :userId', { userId });
+    }
+    if (dateFrom) {
+      countQb.andWhere('wp.createdAt >= :dateFrom', { dateFrom });
+    }
+    if (dateTo) {
+      countQb.andWhere('wp.createdAt <= :dateTo', { dateTo });
+    }
+
+    const total = await countQb.getCount();
+
+    // Build data query
+    const qb = this.wastePhotoRepository
+      .createQueryBuilder('wp')
+      .leftJoinAndSelect('wp.image', 'image')
+      .leftJoinAndSelect('wp.collectionArea', 'collectionArea')
+      .leftJoinAndSelect('wp.company', 'company')
+      .leftJoinAndSelect('wp.user', 'user')
+      .where('wp.companyId = :companyId', { companyId })
+      .orderBy('wp.createdAt', 'DESC')
+      .skip(skip)
+      .take(pageSize);
+
+    if (userId) {
+      qb.andWhere('wp.userId = :userId', { userId });
+    }
+    if (dateFrom) {
+      qb.andWhere('wp.createdAt >= :dateFrom', { dateFrom });
+    }
+    if (dateTo) {
+      qb.andWhere('wp.createdAt <= :dateTo', { dateTo });
+    }
+
+    const items = await qb.getMany();
+
+    return { items, total, page, pageSize };
+  }
 }
 
 

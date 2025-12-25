@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { Args, Mutation, Query, Resolver, ID, Int } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, ID, Int, Subscription } from '@nestjs/graphql';
 import { AchievementEntity } from 'src/entities/smart-trash/achievement.entity';
 import { AchievementService } from '../services/achievement.service';
 import { AchievementCreateInput } from '../inputs/achievement-create.input';
@@ -7,10 +7,18 @@ import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
+import { EmployeeAchievementEntity } from 'src/entities/smart-trash/employee-achievement.entity';
+import { Public } from 'src/decorators/auth/public.decorator';
+import { AchievementEarnedPayload } from 'src/common/dto/achievement-earned.dto';
+import { CacheQuery } from 'src/common/decorators/cache-query.decorator';
 
 @Resolver(() => AchievementEntity)
 export class AchievementResolver {
-  constructor(private readonly achievementService: AchievementService) {}
+  constructor(
+    private readonly achievementService: AchievementService,
+    private readonly pubSub: PubSubService,
+  ) {}
 
   @Mutation(() => AchievementEntity, {
     description: 'Создаёт новую ачивку в рамках выбранной компании',
@@ -28,6 +36,10 @@ export class AchievementResolver {
 
   @Query(() => [AchievementEntity], {
     description: 'Возвращает список ачивок, настроенных для компании',
+  })
+  @CacheQuery({ 
+    ttl: 300, // Cache for 5 minutes
+    keyGenerator: (args) => `query:achievements:company:${args.companyId}`,
   })
   companyAchievements(
     @Args('companyId', {
@@ -65,6 +77,26 @@ export class AchievementResolver {
     @CurrentUser() _user: JwtPayload,
   ): Promise<boolean> {
     return this.achievementService.deleteAchievement(id);
+  }
+
+  @Public()
+  @Subscription(() => AchievementEarnedPayload, {
+    description: 'Подписка на получение новых достижений',
+    filter: (payload, variables) => {
+      if (variables.userId) {
+        return payload.achievementEarned.user.id === variables.userId;
+      }
+      if (variables.companyId) {
+        return payload.achievementEarned.companyId === variables.companyId;
+      }
+      return true;
+    },
+  })
+  achievementEarned(
+    @Args('userId', { type: () => ID, nullable: true }) userId?: string,
+    @Args('companyId', { type: () => ID, nullable: true }) companyId?: string,
+  ) {
+    return this.pubSub.asyncIterator('achievementEarned');
   }
 }
 

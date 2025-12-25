@@ -14,6 +14,7 @@ import { CollectionAreaBinUpdateInput } from '../inputs/collection-area-bin-upda
 import { CollectionAreaBinsAddInput } from '../inputs/collection-area-bins-add.input';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
+import { CacheService } from 'src/common/cache/cache.service';
 
 @Injectable()
 export class CollectionAreaBinService {
@@ -24,6 +25,7 @@ export class CollectionAreaBinService {
     private readonly areaRepository: Repository<CollectionAreaEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async getAllBinsForArea(
@@ -161,6 +163,10 @@ export class CollectionAreaBinService {
     });
 
     const savedBin = await this.binRepository.save(bin);
+    
+    // Invalidate cache for this area's bins
+    await this.cacheService.delete(`query:collectionAreaBins:area:${input.areaId}`);
+    
     return this.binRepository.findOneOrFail({
       where: { id: savedBin.id },
       relations: ['area', 'area.company', 'area.company.logo', 'area.company.createdBy', 'area.company.createdBy.logo'],
@@ -218,7 +224,19 @@ export class CollectionAreaBinService {
       bin.type = input.type;
     }
 
+    // Update coordinates if provided
+    if (input.latitude !== undefined) {
+      bin.latitude = input.latitude;
+    }
+    if (input.longitude !== undefined) {
+      bin.longitude = input.longitude;
+    }
+
     const savedBin = await this.binRepository.save(bin);
+    
+    // Invalidate cache for this area's bins
+    await this.cacheService.delete(`query:collectionAreaBins:area:${bin.area.id}`);
+    
     return this.binRepository.findOneOrFail({
       where: { id: savedBin.id },
       relations: ['area', 'area.company', 'area.company.logo', 'area.company.createdBy', 'area.company.createdBy.logo'],
@@ -258,7 +276,12 @@ export class CollectionAreaBinService {
       throw new ForbiddenException('Администратор не может удалять мусорку чужой компании');
     }
 
+    const areaId = bin.area.id;
     await this.binRepository.remove(bin);
+    
+    // Invalidate cache for this area's bins
+    await this.cacheService.delete(`query:collectionAreaBins:area:${areaId}`);
+    
     return true;
   }
 
@@ -302,22 +325,51 @@ export class CollectionAreaBinService {
       (area.bins || []).map((bin) => bin.type),
     );
 
-    const typesToAdd = input.types.filter((type) => !existingTypes.has(type));
+    const binsToCreate: CollectionAreaBinEntity[] = [];
 
-    if (typesToAdd.length === 0) {
+    // Handle bins with coordinates
+    if (input.binsWithCoordinates && input.binsWithCoordinates.length > 0) {
+      for (const binInput of input.binsWithCoordinates) {
+        if (!existingTypes.has(binInput.type)) {
+          const bin = this.binRepository.create({
+            type: binInput.type,
+            area,
+            latitude: binInput.coordinates?.latitude || null,
+            longitude: binInput.coordinates?.longitude || null,
+          });
+          binsToCreate.push(bin);
+          existingTypes.add(binInput.type);
+        }
+      }
+    }
+
+    // Handle types without coordinates (backward compatibility)
+    if (input.types && input.types.length > 0) {
+      const typesToAdd = input.types.filter((type) => !existingTypes.has(type));
+      const binsWithoutCoords = typesToAdd.map((type) =>
+        this.binRepository.create({
+          type,
+          area,
+          latitude: null,
+          longitude: null,
+        }),
+      );
+      binsToCreate.push(...binsWithoutCoords);
+    }
+
+    if (binsToCreate.length === 0) {
       throw new BadRequestException('Все указанные типы мусорок уже существуют в этой точке сбора');
     }
 
-    const bins = typesToAdd.map((type) =>
-      this.binRepository.create({
-        type,
-        area,
-      }),
-    );
+    const savedBins = await this.binRepository.save(binsToCreate);
 
-    const savedBins = await this.binRepository.save(bins);
+    // Invalidate cache for this area's bins
+    await this.cacheService.delete(`query:collectionAreaBins:area:${input.areaId}`);
 
-    return savedBins;
+    return this.binRepository.find({
+      where: savedBins.map((bin) => ({ id: bin.id })),
+      relations: ['area', 'area.company'],
+    });
   }
 }
 

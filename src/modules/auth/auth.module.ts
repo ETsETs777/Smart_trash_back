@@ -10,6 +10,7 @@ import { AuthResolver } from './auth.resolver';
 import { EmailService } from './services/email.service';
 import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
+import { AuditLoggerService } from '../../common/logger/audit-logger.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
     }),
     ConfigModule,
   ],
-  providers: [JwtStrategy, AuthService, AuthResolver, EmailService],
+  providers: [JwtStrategy, AuthService, AuthResolver, EmailService, AuditLoggerService],
   exports: [AuthService, EmailService],
 })
 export class AuthModule {}

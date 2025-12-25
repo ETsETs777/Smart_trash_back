@@ -7,6 +7,7 @@ import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
+import { CacheQuery } from 'src/common/decorators/cache-query.decorator';
 
 @Resolver(() => CollectionAreaEntity)
 export class CollectionAreaResolver {
@@ -33,6 +34,10 @@ export class CollectionAreaResolver {
       'Возвращает список точек сбора для указанной компании. Доступно администратору и сотруднику компании',
   })
   @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  @CacheQuery({ 
+    ttl: 300, // Cache for 5 minutes
+    keyGenerator: (args) => `query:collectionAreas:company:${args.companyId}`,
+  })
   collectionAreas(
     @Args('companyId', {
       type: () => ID,

@@ -172,6 +172,14 @@ export class CompanyService {
     return [];
   }
 
+  async getAllActiveCompanies(): Promise<CompanyEntity[]> {
+    return this.companyRepository.find({
+      where: { isActive: true },
+      relations: ['logo'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async getCompanyByIdForCurrentUser(id: string, payload: JwtPayload): Promise<CompanyEntity> {
     const company = await this.companyRepository.findOne({
       where: { id },

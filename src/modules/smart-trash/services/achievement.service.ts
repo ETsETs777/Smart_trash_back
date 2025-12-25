@@ -8,6 +8,8 @@ import { EmployeeAchievementEntity } from 'src/entities/smart-trash/employee-ach
 import { WastePhotoEntity } from 'src/entities/smart-trash/waste-photo.entity';
 import { AchievementCriterionType } from 'src/entities/smart-trash/achievement-criterion.enum';
 import { AchievementCreateInput } from '../inputs/achievement-create.input';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
+import { CacheService } from 'src/common/cache/cache.service';
 
 @Injectable()
 export class AchievementService {
@@ -22,6 +24,8 @@ export class AchievementService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(WastePhotoEntity)
     private readonly wastePhotoRepository: Repository<WastePhotoEntity>,
+    private readonly pubSub: PubSubService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async createAchievement(
@@ -52,7 +56,12 @@ export class AchievementService {
       company,
       createdBy: createdBy ?? undefined,
     });
-    return this.achievementRepository.save(achievement);
+    const saved = await this.achievementRepository.save(achievement);
+    
+    // Invalidate cache for company achievements
+    await this.cacheService.delete(`query:achievements:company:${input.companyId}`);
+    
+    return saved;
   }
 
   async listCompanyAchievements(companyId: string): Promise<AchievementEntity[]> {
@@ -74,15 +83,28 @@ export class AchievementService {
     if (data.title !== undefined) ach.title = data.title;
     if (data.description !== undefined) ach.description = data.description ?? '';
     if (data.threshold !== undefined && data.threshold !== null) ach.threshold = data.threshold;
-    return this.achievementRepository.save(ach);
+    const saved = await this.achievementRepository.save(ach);
+    
+    // Invalidate cache for company achievements
+    await this.cacheService.delete(`query:achievements:company:${ach.company.id}`);
+    
+    return saved;
   }
 
   async deleteAchievement(id: string): Promise<boolean> {
-    const ach = await this.achievementRepository.findOne({ where: { id } });
+    const ach = await this.achievementRepository.findOne({ 
+      where: { id },
+      relations: ['company'],
+    });
     if (!ach) {
       throw new NotFoundException('Ачивка не найдена');
     }
+    const companyId = ach.company.id;
     await this.achievementRepository.delete({ id });
+    
+    // Invalidate cache for company achievements
+    await this.cacheService.delete(`query:achievements:company:${companyId}`);
+    
     return true;
   }
 
@@ -139,7 +161,18 @@ export class AchievementService {
         user,
         achievement,
       });
-      created.push(await this.employeeAchievementRepository.save(ea));
+      const saved = await this.employeeAchievementRepository.save(ea);
+      created.push(saved);
+
+      // Publish achievement earned event
+      await this.pubSub.publish('achievementEarned', {
+        achievementEarned: {
+          employeeAchievement: saved,
+          achievement: achievement,
+          user: user,
+          companyId: wastePhoto.company.id,
+        },
+      });
     }
 
     return created;

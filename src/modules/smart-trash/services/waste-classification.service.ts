@@ -7,6 +7,8 @@ import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
 import { GigachatService } from 'src/modules/gigachat/gigachat.service';
 import { AchievementService } from './achievement.service';
 import { ImageService } from 'src/modules/files/services/image.service';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
+import { CacheService } from 'src/common/cache/cache.service';
 
 @Injectable()
 export class WasteClassificationService {
@@ -18,6 +20,8 @@ export class WasteClassificationService {
     private readonly gigachatService: GigachatService,
     private readonly achievementService: AchievementService,
     private readonly imageService: ImageService,
+    private readonly pubSub: PubSubService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async processWastePhoto(wastePhotoId: string): Promise<void> {
@@ -56,19 +60,44 @@ export class WasteClassificationService {
         ? WastePhotoStatus.CLASSIFIED
         : WastePhotoStatus.FAILED;
 
-      await this.wastePhotoRepository.save(wastePhoto);
+      const updatedWastePhoto = await this.wastePhotoRepository.save(wastePhoto);
+
+      // Publish status update event
+      await this.pubSub.publish('wastePhotoStatusUpdated', {
+        wastePhotoStatusUpdated: updatedWastePhoto,
+      });
 
       if (wastePhoto.status === WastePhotoStatus.CLASSIFIED) {
-        await this.achievementService.checkAndGrantForEmployeeByPhoto(
+        const earnedAchievements = await this.achievementService.checkAndGrantForEmployeeByPhoto(
           wastePhoto,
         );
+        
+        // Invalidate analytics cache for the company
+        if (wastePhoto.company?.id) {
+          await this.cacheService.invalidateCompanyCache(wastePhoto.company.id);
+        }
+        
+        // Publish leaderboard update event if achievements were earned
+        if (earnedAchievements.length > 0 && wastePhoto.company?.id) {
+          await this.pubSub.publish('leaderboardUpdated', {
+            leaderboardUpdated: {
+              companyId: wastePhoto.company.id,
+              userId: wastePhoto.user?.id,
+            },
+          });
+        }
       }
     } catch (error) {
       this.logger.error(
         `Ошибка при обработке фотографии мусора ${wastePhotoId}: ${error.message}`,
       );
       wastePhoto.status = WastePhotoStatus.FAILED;
-      await this.wastePhotoRepository.save(wastePhoto);
+      const updatedWastePhoto = await this.wastePhotoRepository.save(wastePhoto);
+
+      // Publish status update event even on failure
+      await this.pubSub.publish('wastePhotoStatusUpdated', {
+        wastePhotoStatusUpdated: updatedWastePhoto,
+      });
     }
   }
 

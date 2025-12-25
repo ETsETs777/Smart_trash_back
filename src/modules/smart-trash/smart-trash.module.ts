@@ -31,6 +31,7 @@ import { CompanyResolver } from './resolvers/company.resolver';
 import { UserService } from './services/user.service';
 import { UserResolver } from './resolvers/user.resolver';
 import { EmployeeService } from './services/employee.service';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
 
 @Module({
   imports: [
@@ -71,7 +72,9 @@ import { EmployeeService } from './services/employee.service';
     UserResolver,
     EmployeeResolver,
     BarcodeResolver,
+    PubSubService,
   ],
+  exports: [PubSubService],
 })
 export class SmartTrashModule {}
 

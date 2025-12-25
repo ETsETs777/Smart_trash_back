@@ -8,6 +8,7 @@ import { Roles } from 'src/modules/auth/roles.decorator';
 import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
+import { CacheQuery } from 'src/common/decorators/cache-query.decorator';
 
 @Resolver(() => CollectionAreaBinEntity)
 export class CollectionAreaBinResolver {
@@ -18,6 +19,10 @@ export class CollectionAreaBinResolver {
       'Возвращает список мусорок для указанной точки сбора. Доступно администратору и сотруднику компании',
   })
   @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  @CacheQuery({ 
+    ttl: 300, // Cache for 5 minutes
+    keyGenerator: (args) => `query:collectionAreaBins:area:${args.areaId}`,
+  })
   collectionAreaBins(
     @Args('areaId', {
       type: () => ID,

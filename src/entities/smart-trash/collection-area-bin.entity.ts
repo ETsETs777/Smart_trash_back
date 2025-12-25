@@ -14,6 +14,14 @@ export class CollectionAreaBinEntity {
   @Column({ type: 'enum', enum: TrashBinType })
   type: TrashBinType;
 
+  @Field(() => Number, { nullable: true, description: 'Широта расположения контейнера' })
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  latitude?: number | null;
+
+  @Field(() => Number, { nullable: true, description: 'Долгота расположения контейнера' })
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  longitude?: number | null;
+
   @Field(() => CollectionAreaEntity, {
     description: 'Область сбора, к которой относится контейнер',
   })

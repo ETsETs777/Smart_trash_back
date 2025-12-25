@@ -71,10 +71,16 @@ export class UserEntity {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Текущий JWT токен пользователя для авторизации',
+    description: 'Текущий JWT access токен пользователя для авторизации',
   })
   @Column({ type: 'text', nullable: true })
   jwtToken?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  refreshToken?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  refreshTokenExpiresAt?: Date | null;
 
   @Field(() => [CompanyEntity], {
     nullable: true,

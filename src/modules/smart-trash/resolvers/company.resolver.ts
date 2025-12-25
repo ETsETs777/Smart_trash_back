@@ -8,6 +8,7 @@ import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
 import { Public } from 'src/decorators/auth/public.decorator';
+import { CacheQuery } from 'src/common/decorators/cache-query.decorator';
 
 @Resolver(() => CompanyEntity)
 export class CompanyResolver {
@@ -92,6 +93,15 @@ export class CompanyResolver {
     qrCode: string,
   ): Promise<CompanyEntity> {
     return this.companyService.getCompanyByQRCode(qrCode);
+  }
+
+  @Query(() => [CompanyEntity], {
+    description: 'Возвращает список всех активных компаний. Доступно без авторизации для публичной страницы',
+  })
+  @Public()
+  @CacheQuery({ ttl: 600 }) // Cache for 10 minutes
+  publicCompanies(): Promise<CompanyEntity[]> {
+    return this.companyService.getAllActiveCompanies();
   }
 }
 

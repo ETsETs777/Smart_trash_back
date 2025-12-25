@@ -3,9 +3,16 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from './modules/config/config.service';
 import { EmailService } from './modules/auth/services/email.service';
+import { Logger as PinoLogger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  
+  // Use Pino logger if available
+  app.useLogger(app.get(PinoLogger));
+  
   const logger = new Logger('Bootstrap');
 
   const configService = await app.resolve(ConfigService);
@@ -16,7 +23,18 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Удаляет свойства, которых нет в DTO
+      forbidNonWhitelisted: true, // Выбрасывает ошибку при наличии лишних свойств
+      transform: true, // Автоматически преобразует типы
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      validateCustomDecorators: true,
+      skipMissingProperties: false,
+    }),
+  );
 
   try {
     const emailService = await app.resolve(EmailService);

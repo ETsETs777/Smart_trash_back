@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import {  APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,12 +16,40 @@ import { SmartTrashModule } from './modules/smart-trash/smart-trash.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtGuard } from './modules/auth/jwt.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
+import { GraphQLThrottlerGuard } from './common/guards/graphql-throttler.guard';
+import { LoadersModule } from './common/loaders/loaders.module';
+import { UserLoader } from './common/loaders/user.loader';
+import { CompanyLoader } from './common/loaders/company.loader';
+import { ImageLoader } from './common/loaders/image.loader';
+import { LoggerModule } from './common/logger/logger.module';
+import { AuditLoggerService } from './common/logger/audit-logger.service';
+import { CacheModule } from './common/cache/cache.module';
+import { CacheQueryInterceptor } from './common/interceptors/cache-query.interceptor';
 //import { AllExceptionLoggerFilter } from './common/filters/all-exception-logger.filter';
 
 @Module({
   imports: [
     ConfigModule,
+    LoggerModule,
+    CacheModule,
     AuthModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 hour
+        limit: 1000, // 1000 requests per hour
+      },
+    ]),
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',
@@ -28,15 +57,53 @@ import { RolesGuard } from './modules/auth/roles.guard';
         db: Number(process.env.REDIS_DB || 0),
       },
     }),
-    GraphQLModule.forRoot({
+    GraphQLModule.forRootAsync({
       driver: ApolloDriver,
-      installSubscriptionHandlers: true,
-      playground: true,
-      context: ({ req, res }: { req: Request; res: Response }) => ({
-        req,
-        res,
+      imports: [LoadersModule],
+      inject: [UserLoader, CompanyLoader, ImageLoader],
+      useFactory: (
+        userLoader: UserLoader,
+        companyLoader: CompanyLoader,
+        imageLoader: ImageLoader,
+      ) => ({
+        installSubscriptionHandlers: true,
+        playground: true,
+        // Enable @defer and @stream directives support
+        plugins: [],
+        context: ({ req, res, connection }: { req: Request; res: Response; connection?: any }) => {
+          // For subscriptions, connection context is used
+          if (connection) {
+            return {
+              ...connection.context,
+              loaders: {
+                userLoader,
+                companyLoader,
+                imageLoader,
+              },
+            };
+          }
+          // For queries/mutations, request context is used
+          return {
+            req,
+            res,
+            loaders: {
+              userLoader,
+              companyLoader,
+              imageLoader,
+            },
+          };
+        },
+        subscriptions: {
+          'graphql-ws': {
+            onConnect: (context: any) => {
+              // Extract token from connection params
+              const token = context.connectionParams?.authorization?.replace('Bearer ', '') || null;
+              return { token };
+            },
+          },
+        },
+        autoSchemaFile: './dist/schema.gql',
       }),
-      autoSchemaFile: './dist/schema.gql',
     }),
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
@@ -49,13 +116,17 @@ import { RolesGuard } from './modules/auth/roles.guard';
     }),
     FileModule,
     SmartTrashModule,
+    LoadersModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     AppResolver,
+    AuditLoggerService,
+    { provide: APP_GUARD, useClass: GraphQLThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: CacheQueryInterceptor },
    // { provide: APP_FILTER, useClass: AllExceptionLoggerFilter },
   ],
 })

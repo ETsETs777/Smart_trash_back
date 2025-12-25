@@ -20,7 +20,10 @@ import { LoginInput } from './inputs/login.input';
 import { AdminRegisterInput } from './inputs/admin-register.input';
 import { EmployeeRegisterInput } from './inputs/employee-register-new.input';
 import { ConfirmEmailInput } from './inputs/confirm-email.input';
+import { RefreshTokenInput } from './inputs/refresh-token.input';
 import { EmailService } from './services/email.service';
+import { AuditLoggerService, AuditAction } from '../../common/logger/audit-logger.service';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class AuthService {
@@ -34,13 +37,32 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
+    private readonly auditLogger: AuditLoggerService,
+    private readonly pinoLogger: PinoLogger,
   ) {}
 
-  private generateToken(payload: JwtPayload): string {
+  private generateAccessToken(payload: JwtPayload): string {
+    // Short-lived access token (15 minutes)
     return this.jwtService.sign(payload, {
       secret: this.configService.config.jwtToken.secret,
-      expiresIn: this.configService.config.jwtToken.userTokenExpiresIn,
+      expiresIn: '15m', // Short expiration for security
     });
+  }
+
+  private generateRefreshToken(payload: JwtPayload): string {
+    // Long-lived refresh token (7 days)
+    return this.jwtService.sign(
+      { ...payload, type: 'refresh' },
+      {
+        secret: this.configService.config.jwtToken.secret,
+        expiresIn: '7d',
+      },
+    );
+  }
+
+  // Backward compatibility
+  private generateToken(payload: JwtPayload): string {
+    return this.generateAccessToken(payload);
   }
 
   private generateEmailConfirmationToken(): string {
@@ -146,6 +168,17 @@ export class AuthService {
       `Администратор ${normalizedEmail} зарегистрирован (ожидает подтверждения)`,
     );
 
+    // Audit log
+    this.auditLogger.log({
+      action: AuditAction.REGISTER,
+      userEmail: normalizedEmail,
+      userRole: UserRole.ADMIN_COMPANY,
+      companyId: company.id,
+      metadata: {
+        companyName: input.companyName,
+      },
+    });
+
     return userWithRelations;
   }
 
@@ -226,6 +259,17 @@ export class AuthService {
       `Сотрудник ${normalizedEmail} зарегистрирован (ожидает подтверждения)`,
     );
 
+    // Audit log
+    this.auditLogger.log({
+      action: AuditAction.REGISTER,
+      userEmail: normalizedEmail,
+      userRole: UserRole.EMPLOYEE,
+      companyId: company.id,
+      metadata: {
+        employeeName: input.fullName,
+      },
+    });
+
     return userWithRelations;
   }
 
@@ -285,10 +329,30 @@ export class AuthService {
       companyId,
     };
 
-    const token = this.generateToken(payload);
+    const accessToken = this.generateAccessToken(payload);
+    const refreshToken = this.generateRefreshToken(payload);
 
-    user.jwtToken = token;
+    // Calculate refresh token expiration (7 days from now)
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7);
+
+    user.jwtToken = accessToken;
+    user.refreshToken = refreshToken;
+    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     const savedUser = await this.userRepository.save(user);
+    
+    // Audit log for successful login
+    this.auditLogger.log({
+      action: AuditAction.LOGIN,
+      userId: user.id,
+      userEmail: user.email,
+      userRole: user.role,
+      companyId,
+      metadata: {
+        loginMethod: 'email',
+      },
+    });
+    
     const userWithRelations = await this.userRepository.findOneOrFail({
       where: { id: savedUser.id },
       relations: ['logo', 'employeeCompanies', 'employeeCompanies.logo', 'createdCompanies', 'createdCompanies.logo'],
@@ -326,6 +390,17 @@ export class AuthService {
 
     user.isEmailConfirmed = true;
     user.emailConfirmationToken = null;
+    
+    // Audit log for email confirmation
+    this.auditLogger.log({
+      action: AuditAction.EMAIL_CONFIRMED,
+      userId: user.id,
+      userEmail: user.email,
+      userRole: user.role,
+      metadata: {
+        confirmationMethod: 'token',
+      },
+    });
     const savedUser = await this.userRepository.save(user);
     const confirmedUser = await this.userRepository.findOneOrFail({
       where: { id: savedUser.id },

@@ -11,6 +11,7 @@ import {
   CompanyLeaderboardEntry,
   CollectionAreaStats,
 } from './analytics.types';
+import { CacheService } from 'src/common/cache/cache.service';
 
 @Injectable()
 export class AnalyticsService {
@@ -21,6 +22,7 @@ export class AnalyticsService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(CollectionAreaEntity)
     private readonly areaRepository: Repository<CollectionAreaEntity>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async getCompanyAnalytics(
@@ -29,6 +31,16 @@ export class AnalyticsService {
   ): Promise<CompanyAnalyticsSummary> {
     const dateFrom = params?.dateFrom;
     const dateTo = params?.dateTo;
+    
+    // Create cache key
+    const cacheKey = `analytics:company:${companyId}:${dateFrom?.toISOString() || 'all'}:${dateTo?.toISOString() || 'all'}`;
+    
+    // Try to get from cache (5 minutes TTL)
+    const cached = await this.cacheService.get<CompanyAnalyticsSummary>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const [binUsage, leaderboard, hallOfFame, areas] = await Promise.all([
       this.getCompanyBinUsage(companyId, dateFrom, dateTo),
       this.getCompanyLeaderboard(companyId, 10, dateFrom, dateTo),
@@ -36,13 +48,20 @@ export class AnalyticsService {
       this.getCompanyAreaStats(companyId, dateFrom, dateTo),
     ]);
 
-    return {
+    const result: CompanyAnalyticsSummary = {
       companyId,
       binUsage,
       leaderboard,
       hallOfFame,
       areas,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     };
+
+    // Cache the result for 5 minutes
+    await this.cacheService.set(cacheKey, result, 300);
+
+    return result;
   }
 
   async getCompanyBinUsage(
