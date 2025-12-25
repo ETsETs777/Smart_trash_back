@@ -29,6 +29,7 @@ import { AuditLoggerService } from '../../common/logger/audit-logger.service';
     }),
     ConfigModule,
   ],
+  controllers: [AuthController],
   providers: [JwtStrategy, AuthService, AuthResolver, EmailService, AuditLoggerService],
   exports: [AuthService, EmailService],
 })
