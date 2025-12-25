@@ -4,8 +4,8 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from './modules/config/config.service';
 import { EmailService } from './modules/auth/services/email.service';
 import { Logger as PinoLogger } from 'nestjs-pino';
-import * as cookieParser from 'cookie-parser';
-import * as helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
