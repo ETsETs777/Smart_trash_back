@@ -1,4 +1,5 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
+import { Sanitize } from 'src/common/decorators/sanitize.decorator';
 
 @InputType({
   description: 'Входные данные для обновления данных сотрудника администратором компании',
@@ -18,6 +19,7 @@ export class UserUpdateEmployeeInput {
     nullable: true,
     description: 'Фамилия, имя и отчество сотрудника',
   })
+  @Sanitize()
   fullName?: string | null;
 
   @Field(() => String, {

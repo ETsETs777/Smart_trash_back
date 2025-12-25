@@ -1,5 +1,6 @@
 import { Field, ID, InputType, Int } from '@nestjs/graphql';
 import { AchievementCriterionType } from 'src/entities/smart-trash/achievement-criterion.enum';
+import { Sanitize, SanitizeRichText } from 'src/common/decorators/sanitize.decorator';
 
 @InputType({
   description: 'Входные данные для создания ачивки в компании',
@@ -20,11 +21,13 @@ export class AchievementCreateInput {
   @Field({
     description: 'Название ачивки',
   })
+  @Sanitize()
   title: string;
 
   @Field({
     description: 'Описание условия получения ачивки',
   })
+  @SanitizeRichText()
   description: string;
 
   @Field(() => AchievementCriterionType, {

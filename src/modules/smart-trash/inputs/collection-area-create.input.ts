@@ -1,5 +1,6 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
+import { Sanitize, SanitizeRichText } from 'src/common/decorators/sanitize.decorator';
 
 @InputType({
   description:
@@ -14,12 +15,14 @@ export class CollectionAreaCreateInput {
   @Field({
     description: 'Название области сбора мусора',
   })
+  @Sanitize()
   name: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'Описание или дополнительные детали области сбора',
   })
+  @SanitizeRichText()
   description?: string | null;
 
   @Field(() => [TrashBinType], {

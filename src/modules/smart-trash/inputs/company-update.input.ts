@@ -1,4 +1,5 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
+import { Sanitize, SanitizeRichText } from 'src/common/decorators/sanitize.decorator';
 
 @InputType({
   description: 'Входные данные для обновления существующей компании администратором',
@@ -13,12 +14,14 @@ export class CompanyUpdateInput {
     nullable: true,
     description: 'Новое название компании',
   })
+  @Sanitize()
   name?: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'Новое краткое описание компании',
   })
+  @SanitizeRichText()
   description?: string | null;
 
   @Field(() => Boolean, {

@@ -1,4 +1,5 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
+import { Sanitize } from 'src/common/decorators/sanitize.decorator';
 
 @InputType({
   description: 'Входные данные для создания сотрудника компании',
@@ -12,17 +13,19 @@ export class EmployeeCreateInput {
   @Field({
     description: 'Имя сотрудника',
   })
+  @Sanitize()
   firstName: string;
 
   @Field({
     description: 'Фамилия сотрудника',
   })
+  @Sanitize()
   lastName: string;
 
   @Field({
     description: 'Электронная почта сотрудника (обязательна для создания)',
   })
-  email: string;
+  email: string; // Email не санитизируем, так как он валидируется отдельно
 
   @Field(() => Boolean, {
     nullable: true,
