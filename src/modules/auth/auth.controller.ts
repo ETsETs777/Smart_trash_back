@@ -1,6 +1,6 @@
 import { Controller, Get, Res, Req } from '@nestjs/common'
 import { Response, Request } from 'express'
-import { Public } from '../common/decorators/public.decorator'
+import { Public } from 'src/decorators/auth/public.decorator'
 import * as crypto from 'crypto'
 
 @Controller('auth')
