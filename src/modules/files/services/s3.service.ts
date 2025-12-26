@@ -43,7 +43,19 @@ export class S3Service implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    await this.initializeBucket();
+    // Try to initialize bucket, but don't fail if MinIO is not available
+    // This allows the app to start even if MinIO is not running
+    try {
+      await this.initializeBucket();
+    } catch (error) {
+      this.logger.warn(
+        `MinIO/S3 недоступен. Приложение запущено, но функции загрузки файлов могут не работать. Ошибка: ${error.message}`,
+      );
+      this.logger.warn(
+        `Убедитесь, что MinIO запущен на ${this.configService.config.s3.endPoint}:${this.configService.config.s3.port}`,
+      );
+      // Don't throw - allow app to start without S3
+    }
   }
 
   private async initializeBucket(): Promise<void> {
@@ -53,7 +65,7 @@ export class S3Service implements OnModuleInit {
 
     try {
       const bucketName = this.configService.config.s3.bucketName;
-      let retries = 5;
+      let retries = 10; // Increased retries
       let exists = false;
 
       while (retries > 0 && !exists) {
@@ -66,7 +78,7 @@ export class S3Service implements OnModuleInit {
             `Попытка проверить существование bucket "${bucketName}" не удалась. Осталось попыток: ${retries}`,
           );
           if (retries > 0) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 3000)); // Increased delay
           }
         }
       }
