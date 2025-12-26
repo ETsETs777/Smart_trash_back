@@ -1,6 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +26,8 @@ import { LoggerModule } from './common/logger/logger.module';
 import { AuditLoggerService } from './common/logger/audit-logger.service';
 import { CacheModule } from './common/cache/cache.module';
 import { CacheQueryInterceptor } from './common/interceptors/cache-query.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { GraphQLComplexityPlugin } from './common/plugins/graphql-complexity.plugin';
 //import { AllExceptionLoggerFilter } from './common/filters/all-exception-logger.filter';
 
 @Module({
@@ -70,7 +72,7 @@ import { CacheQueryInterceptor } from './common/interceptors/cache-query.interce
         installSubscriptionHandlers: true,
         playground: true,
         // Enable @defer and @stream directives support
-        plugins: [],
+        plugins: [new GraphQLComplexityPlugin()],
         context: ({ req, res, connection }: { req: Request; res: Response; connection?: any }) => {
           // For subscriptions, connection context is used
           if (connection) {
@@ -128,6 +130,7 @@ import { CacheQueryInterceptor } from './common/interceptors/cache-query.interce
     { provide: APP_GUARD, useClass: JwtGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: CacheQueryInterceptor },
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
    // { provide: APP_FILTER, useClass: AllExceptionLoggerFilter },
   ],
 })

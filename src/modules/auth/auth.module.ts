@@ -12,11 +12,13 @@ import { EmailService } from './services/email.service';
 import { UserEntity } from 'src/entities/smart-trash/user.entity';
 import { CompanyEntity } from 'src/entities/smart-trash/company.entity';
 import { AuditLoggerService } from '../../common/logger/audit-logger.service';
+import { LoginAttemptTrackerService } from '../../common/services/login-attempt-tracker.service';
+import { LoginAttemptEntity } from '../../entities/security/login-attempt.entity';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([UserEntity, CompanyEntity]),
+    TypeOrmModule.forFeature([UserEntity, CompanyEntity, LoginAttemptEntity]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -30,7 +32,7 @@ import { AuditLoggerService } from '../../common/logger/audit-logger.service';
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [JwtStrategy, AuthService, AuthResolver, EmailService, AuditLoggerService],
+  providers: [JwtStrategy, AuthService, AuthResolver, EmailService, AuditLoggerService, LoginAttemptTrackerService],
   exports: [AuthService, EmailService],
 })
 export class AuthModule {}

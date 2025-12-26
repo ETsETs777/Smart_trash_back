@@ -7,6 +7,7 @@ import { CollectionAreaBinEntity } from './smart-trash/collection-area-bin.entit
 import { AchievementEntity } from './smart-trash/achievement.entity';
 import { EmployeeAchievementEntity } from './smart-trash/employee-achievement.entity';
 import { WastePhotoEntity } from './smart-trash/waste-photo.entity';
+import { LoginAttemptEntity } from './security/login-attempt.entity';
 
 const Entities = [
   FileEntity,
@@ -18,6 +19,7 @@ const Entities = [
   AchievementEntity,
   EmployeeAchievementEntity,
   WastePhotoEntity,
+  LoginAttemptEntity,
 ];
 
 export default Entities;

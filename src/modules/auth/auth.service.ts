@@ -24,6 +24,8 @@ import { RefreshTokenInput } from './inputs/refresh-token.input';
 import { EmailService } from './services/email.service';
 import { AuditLoggerService, AuditAction } from '../../common/logger/audit-logger.service';
 import { PinoLogger } from 'nestjs-pino';
+import { LoginAttemptTrackerService } from '../../common/services/login-attempt-tracker.service';
+import { Request } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -39,6 +41,7 @@ export class AuthService {
     private readonly emailService: EmailService,
     private readonly auditLogger: AuditLoggerService,
     private readonly pinoLogger: PinoLogger,
+    private readonly loginAttemptTracker: LoginAttemptTrackerService,
   ) {}
 
   private generateAccessToken(payload: JwtPayload): string {
@@ -273,8 +276,21 @@ export class AuthService {
     return userWithRelations;
   }
 
-  async login(input: LoginInput): Promise<UserEntity> {
+  async login(input: LoginInput, requestInfo?: { ipAddress?: string; userAgent?: string }): Promise<UserEntity> {
     const normalizedEmail = input.email.trim().toLowerCase();
+    
+    // Check if account should be locked
+    const shouldLock = await this.loginAttemptTracker.shouldLockAccount(normalizedEmail, requestInfo?.ipAddress);
+    if (shouldLock) {
+      await this.loginAttemptTracker.logAttempt({
+        email: normalizedEmail,
+        ipAddress: requestInfo?.ipAddress,
+        userAgent: requestInfo?.userAgent,
+        success: false,
+        failureReason: 'Account locked due to too many failed attempts',
+      });
+      throw new UnauthorizedException('Слишком много неудачных попыток входа. Попробуйте позже через 15 минут.');
+    }
     const user = await this.userRepository.findOne({
       where: { email: normalizedEmail },
       relations: ['logo', 'employeeCompanies', 'employeeCompanies.logo', 'createdCompanies', 'createdCompanies.logo'],
@@ -300,6 +316,14 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
+      await this.loginAttemptTracker.logAttempt({
+        email: normalizedEmail,
+        ipAddress: requestInfo?.ipAddress,
+        userAgent: requestInfo?.userAgent,
+        success: false,
+        failureReason: 'Invalid password',
+        userId: user.id,
+      });
       throw new UnauthorizedException('Неверный email или пароль');
     }
 
@@ -341,6 +365,15 @@ export class AuthService {
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     const savedUser = await this.userRepository.save(user);
     
+    // Log successful login attempt
+    await this.loginAttemptTracker.logAttempt({
+      email: normalizedEmail,
+      ipAddress: requestInfo?.ipAddress,
+      userAgent: requestInfo?.userAgent,
+      success: true,
+      userId: user.id,
+    });
+
     // Audit log for successful login
     this.auditLogger.log({
       action: AuditAction.LOGIN,
@@ -350,6 +383,7 @@ export class AuthService {
       companyId,
       metadata: {
         loginMethod: 'email',
+        ipAddress: requestInfo?.ipAddress,
       },
     });
     
