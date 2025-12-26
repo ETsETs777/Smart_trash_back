@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { Repository, MoreThanOrEqual, LessThan } from 'typeorm'
 import { LoginAttemptEntity } from '../../entities/security/login-attempt.entity'
 
 export interface LoginAttemptData {
@@ -147,11 +147,9 @@ export class LoginAttemptTrackerService {
   async cleanupOldAttempts(): Promise<void> {
     const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30 days
     
-    const result = await this.loginAttemptRepository
-      .createQueryBuilder()
-      .delete()
-      .where('attemptedAt < :cutoffDate', { cutoffDate })
-      .execute()
+    const result = await this.loginAttemptRepository.delete({
+      attemptedAt: LessThan(cutoffDate),
+    })
 
     if (result.affected && result.affected > 0) {
       this.logger.log(`Cleaned up ${result.affected} old login attempts`)

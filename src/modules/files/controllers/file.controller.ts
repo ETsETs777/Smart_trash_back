@@ -25,6 +25,7 @@ import { IFileOrImageUploadBody } from '../interfaces/file-or-image-upload-body.
 import { FileEndpoints } from '../endpoints/file.endpoints';
 import ContentDisposition from 'content-disposition';
 import { Public } from 'src/decorators/auth/public.decorator';
+import { validateFileSize, sanitizeFilename } from '../utils/file-content-validator';
 
 @Controller(FileEndpoints.rootEndpoint)
 export class FileController {
@@ -46,10 +47,21 @@ export class FileController {
     @UploadedFile('file') file: Express.Multer.File,
     @Body() body: IFileOrImageUploadBody,
   ): Promise<FileEntity> {
+    if (!file) {
+      throw new BadRequestException('Файл не был загружен');
+    }
+
+    // Validate file size (50MB max)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    validateFileSize(file.size, MAX_FILE_SIZE);
+
+    // Sanitize filename
+    const sanitizedFilename = sanitizeFilename(file.originalname || 'file');
+    const fileName = body.filename ? sanitizeFilename(body.filename) : sanitizedFilename;
+
     this.logger.log(
       `metod: ${this.fileUpload.name}: with body ${JSON.stringify(body)}`,
     );
-    const fileName = body.filename || file.originalname;
     return this.fileService.createFileStore(
       fileName,
       file.buffer,
