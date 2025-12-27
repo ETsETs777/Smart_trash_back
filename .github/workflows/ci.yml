@@ -1,0 +1,102 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Smart_trash_back/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./Smart_trash_back
+      run: npm ci
+    
+    - name: Run linter
+      working-directory: ./Smart_trash_back
+      run: npm run lint
+    
+    - name: Run tests
+      working-directory: ./Smart_trash_back
+      run: npm run test
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_DATABASE: test_db
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        JWT_TOKEN_SECRET: test-secret-key
+    
+    - name: Build
+      working-directory: ./Smart_trash_back
+      run: npm run build
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Smart_trash_back/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./Smart_trash_back
+      run: npm ci
+    
+    - name: Build for production
+      working-directory: ./Smart_trash_back
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: Smart_trash_back/dist
+        retention-days: 7
+

@@ -47,3 +47,27 @@ export class AdminRegisterInput {
   companyDescription?: string | null;
 }
 
+
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Описание компании',
+  })
+  @IsOptional()
+  @IsString({ message: 'Описание компании должно быть строкой' })
+  @SanitizeRichText()
+  companyDescription?: string | null;
+}
+
+
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Описание компании',
+  })
+  @IsOptional()
+  @IsString({ message: 'Описание компании должно быть строкой' })
+  @SanitizeRichText()
+  companyDescription?: string | null;
+}
+

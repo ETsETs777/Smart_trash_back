@@ -247,3 +247,27 @@ export class S3Service implements OnModuleInit {
     return files;
   }
 }
+
+      this.configService.config.s3.bucketName,
+      args.prefix ?? '',
+      args.recursive ?? true,
+    );
+    const files: BucketItem[] = [];
+    for await (const file of stream) {
+      files.push(file);
+    }
+    return files;
+  }
+}
+
+      this.configService.config.s3.bucketName,
+      args.prefix ?? '',
+      args.recursive ?? true,
+    );
+    const files: BucketItem[] = [];
+    for await (const file of stream) {
+      files.push(file);
+    }
+    return files;
+  }
+}

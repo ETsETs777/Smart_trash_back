@@ -54,3 +54,43 @@ export class ImageMIMETypeValidator implements PipeTransform {
     return file;
   }
 }
+
+        validateFileContent(file.buffer, file.mimetype);
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException(
+          'Не удалось проверить содержимое файла',
+        );
+      }
+    }
+
+    // Sanitize filename
+    if (file.originalname) {
+      file.originalname = sanitizeFilename(file.originalname);
+    }
+
+    return file;
+  }
+}
+
+        validateFileContent(file.buffer, file.mimetype);
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException(
+          'Не удалось проверить содержимое файла',
+        );
+      }
+    }
+
+    // Sanitize filename
+    if (file.originalname) {
+      file.originalname = sanitizeFilename(file.originalname);
+    }
+
+    return file;
+  }
+}

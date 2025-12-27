@@ -13,3 +13,9 @@ export class ConfirmEmailInput {
   token: string;
 }
 
+
+}
+
+
+}
+

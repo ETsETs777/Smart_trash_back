@@ -112,3 +112,27 @@ export class FileController {
     return new StreamableFile(fileStream);
   }
 }
+
+      }
+    });
+
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': ContentDisposition(file.name),
+    });
+
+    return new StreamableFile(fileStream);
+  }
+}
+
+      }
+    });
+
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': ContentDisposition(file.name),
+    });
+
+    return new StreamableFile(fileStream);
+  }
+}

@@ -23,3 +23,7 @@ const Entities = [
 ];
 
 export default Entities;
+
+export default Entities;
+
+export default Entities;

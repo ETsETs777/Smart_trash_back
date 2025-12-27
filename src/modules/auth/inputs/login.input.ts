@@ -20,3 +20,13 @@ export class LoginInput {
   password: string;
 }
 
+
+  @IsNotEmpty({ message: 'Пароль обязателен' })
+  password: string;
+}
+
+
+  @IsNotEmpty({ message: 'Пароль обязателен' })
+  password: string;
+}
+

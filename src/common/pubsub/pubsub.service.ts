@@ -17,3 +17,13 @@ export class PubSubService extends PubSub {
   }
 }
 
+
+    return super.asyncIterator(triggers);
+  }
+}
+
+
+    return super.asyncIterator(triggers);
+  }
+}
+

@@ -135,3 +135,11 @@ import { GraphQLComplexityPlugin } from './common/plugins/graphql-complexity.plu
   ],
 })
 export class AppModule {}
+
+  ],
+})
+export class AppModule {}
+
+  ],
+})
+export class AppModule {}

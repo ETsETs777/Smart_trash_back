@@ -35,3 +35,23 @@ export class EmployeeRegisterInput {
   companyId: string;
 }
 
+
+
+  @Field(() => ID, {
+    description: 'Идентификатор компании, в которой работает сотрудник',
+  })
+  @IsUUID('4', { message: 'Идентификатор компании должен быть валидным UUID' })
+  @IsNotEmpty({ message: 'Идентификатор компании обязателен' })
+  companyId: string;
+}
+
+
+
+  @Field(() => ID, {
+    description: 'Идентификатор компании, в которой работает сотрудник',
+  })
+  @IsUUID('4', { message: 'Идентификатор компании должен быть валидным UUID' })
+  @IsNotEmpty({ message: 'Идентификатор компании обязателен' })
+  companyId: string;
+}
+
