@@ -473,11 +473,23 @@ export class AuthService {
     }
   }
 
-  async refreshToken(input: RefreshTokenInput): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshToken(
+    input: RefreshTokenInput,
+    req?: Request,
+    res?: Response,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Get refresh token from cookie or input (cookie takes priority)
+    const refreshTokenFromCookie = req?.cookies?.['refresh-token'];
+    const refreshToken = refreshTokenFromCookie || input.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh токен не найден');
+    }
+
     // Verify the refresh token
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(input.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.config.jwtToken.secret,
       });
     } catch (error) {
@@ -502,7 +514,7 @@ export class AuthService {
       throw new UnauthorizedException('Аккаунт деактивирован');
     }
 
-    if (user.refreshToken !== input.refreshToken) {
+    if (user.refreshToken !== refreshToken) {
       throw new UnauthorizedException('Невалидный refresh токен');
     }
 
@@ -524,11 +536,22 @@ export class AuthService {
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     await this.userRepository.save(user);
 
+    // Set new refresh token in httpOnly cookie (token rotation)
+    if (res) {
+      res.cookie('refresh-token', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+    }
+
     this.logger.log(`Токены обновлены для пользователя ${user.email}`);
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshToken, // Still return for backward compatibility, but client should use cookie
     };
   }
 }
@@ -566,11 +589,23 @@ export class AuthService {
     }
   }
 
-  async refreshToken(input: RefreshTokenInput): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshToken(
+    input: RefreshTokenInput,
+    req?: Request,
+    res?: Response,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Get refresh token from cookie or input (cookie takes priority)
+    const refreshTokenFromCookie = req?.cookies?.['refresh-token'];
+    const refreshToken = refreshTokenFromCookie || input.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh токен не найден');
+    }
+
     // Verify the refresh token
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(input.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.config.jwtToken.secret,
       });
     } catch (error) {
@@ -595,7 +630,7 @@ export class AuthService {
       throw new UnauthorizedException('Аккаунт деактивирован');
     }
 
-    if (user.refreshToken !== input.refreshToken) {
+    if (user.refreshToken !== refreshToken) {
       throw new UnauthorizedException('Невалидный refresh токен');
     }
 
@@ -617,11 +652,22 @@ export class AuthService {
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     await this.userRepository.save(user);
 
+    // Set new refresh token in httpOnly cookie (token rotation)
+    if (res) {
+      res.cookie('refresh-token', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+    }
+
     this.logger.log(`Токены обновлены для пользователя ${user.email}`);
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshToken, // Still return for backward compatibility, but client should use cookie
     };
   }
 }
@@ -659,11 +705,23 @@ export class AuthService {
     }
   }
 
-  async refreshToken(input: RefreshTokenInput): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshToken(
+    input: RefreshTokenInput,
+    req?: Request,
+    res?: Response,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Get refresh token from cookie or input (cookie takes priority)
+    const refreshTokenFromCookie = req?.cookies?.['refresh-token'];
+    const refreshToken = refreshTokenFromCookie || input.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh токен не найден');
+    }
+
     // Verify the refresh token
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(input.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.config.jwtToken.secret,
       });
     } catch (error) {
@@ -688,7 +746,7 @@ export class AuthService {
       throw new UnauthorizedException('Аккаунт деактивирован');
     }
 
-    if (user.refreshToken !== input.refreshToken) {
+    if (user.refreshToken !== refreshToken) {
       throw new UnauthorizedException('Невалидный refresh токен');
     }
 
@@ -710,11 +768,22 @@ export class AuthService {
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     await this.userRepository.save(user);
 
+    // Set new refresh token in httpOnly cookie (token rotation)
+    if (res) {
+      res.cookie('refresh-token', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+    }
+
     this.logger.log(`Токены обновлены для пользователя ${user.email}`);
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshToken, // Still return for backward compatibility, but client should use cookie
     };
   }
 }
