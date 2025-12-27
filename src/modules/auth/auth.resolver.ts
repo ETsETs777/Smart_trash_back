@@ -62,10 +62,11 @@ export class AuthResolver {
     @Context() context: any,
   ): Promise<UserEntity> {
     const req = context.req as any
+    const res = context.res as any
     const ipAddress = req?.ip || req?.connection?.remoteAddress || req?.headers?.['x-forwarded-for']?.split(',')[0] || 'unknown'
     const userAgent = req?.headers?.['user-agent'] || 'unknown'
     
-    return this.authService.login(input, { ipAddress, userAgent });
+    return this.authService.login(input, { ipAddress, userAgent }, res);
   }
 
   @Public()
@@ -89,11 +90,14 @@ export class AuthResolver {
   })
   refreshToken(
     @Args('input', {
-      description: 'Refresh токен для получения нового access токена',
+      description: 'Refresh токен для получения нового access токена (опционально, если используется cookie)',
     })
     input: RefreshTokenInput,
+    @Context() context: any,
   ): Promise<TokenResponse> {
-    return this.authService.refreshToken(input);
+    const req = context.req as any
+    const res = context.res as any
+    return this.authService.refreshToken(input, req, res);
   }
 
   @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)

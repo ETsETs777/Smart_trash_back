@@ -25,7 +25,7 @@ import { EmailService } from './services/email.service';
 import { AuditLoggerService, AuditAction } from '../../common/logger/audit-logger.service';
 import { PinoLogger } from 'nestjs-pino';
 import { LoginAttemptTrackerService } from '../../common/services/login-attempt-tracker.service';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -276,7 +276,11 @@ export class AuthService {
     return userWithRelations;
   }
 
-  async login(input: LoginInput, requestInfo?: { ipAddress?: string; userAgent?: string }): Promise<UserEntity> {
+  async login(
+    input: LoginInput,
+    requestInfo?: { ipAddress?: string; userAgent?: string },
+    res?: Response,
+  ): Promise<UserEntity> {
     const normalizedEmail = input.email.trim().toLowerCase();
     
     // Check if account should be locked
@@ -364,6 +368,17 @@ export class AuthService {
     user.refreshToken = refreshToken;
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
     const savedUser = await this.userRepository.save(user);
+
+    // Set refresh token in httpOnly cookie for security
+    if (res) {
+      res.cookie('refresh-token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+    }
     
     // Log successful login attempt
     await this.loginAttemptTracker.logAttempt({
