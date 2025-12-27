@@ -36,6 +36,33 @@ export class CsrfMiddleware implements NestMiddleware {
       throw new UnauthorizedException('Invalid or missing CSRF token')
     }
 
+    // Validate Origin/Referer headers for additional CSRF protection
+    const origin = req.headers.origin || req.headers.referer
+    const host = req.headers.host
+
+    if (origin && host) {
+      // Extract host from origin/referer
+      let originHost: string
+      try {
+        if (origin.startsWith('http://') || origin.startsWith('https://')) {
+          const url = new URL(origin)
+          originHost = url.host
+        } else {
+          originHost = origin
+        }
+      } catch {
+        originHost = origin
+      }
+
+      // Compare hosts (allow localhost for development)
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
+      const originIsLocalhost = originHost.includes('localhost') || originHost.includes('127.0.0.1')
+
+      if (!isLocalhost && !originIsLocalhost && originHost !== host) {
+        throw new UnauthorizedException('Invalid Origin/Referer header')
+      }
+    }
+
     next()
   }
 }
