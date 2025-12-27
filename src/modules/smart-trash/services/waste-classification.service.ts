@@ -6,6 +6,7 @@ import { WastePhotoStatus } from 'src/entities/smart-trash/waste-photo-status.en
 import { TrashBinType } from 'src/entities/smart-trash/trash-bin-type.enum';
 import { GigachatService } from 'src/modules/gigachat/gigachat.service';
 import { AchievementService } from './achievement.service';
+import { GamificationService } from './gamification.service';
 import { ImageService } from 'src/modules/files/services/image.service';
 import { PubSubService } from 'src/common/pubsub/pubsub.service';
 import { CacheService } from 'src/common/cache/cache.service';
@@ -19,6 +20,7 @@ export class WasteClassificationService {
     private readonly wastePhotoRepository: Repository<WastePhotoEntity>,
     private readonly gigachatService: GigachatService,
     private readonly achievementService: AchievementService,
+    private readonly gamificationService: GamificationService,
     private readonly imageService: ImageService,
     private readonly pubSub: PubSubService,
     private readonly cacheService: CacheService,
@@ -27,7 +29,7 @@ export class WasteClassificationService {
   async processWastePhoto(wastePhotoId: string): Promise<void> {
     const wastePhoto = await this.wastePhotoRepository.findOne({
       where: { id: wastePhotoId },
-      relations: ['image', 'company', 'collectionArea'],
+      relations: ['image', 'company', 'collectionArea', 'user'],
     });
     if (!wastePhoto) {
       throw new NotFoundException('Фотография мусора не найдена для обработки');
@@ -67,22 +69,55 @@ export class WasteClassificationService {
         wastePhotoStatusUpdated: updatedWastePhoto,
       });
 
-      if (wastePhoto.status === WastePhotoStatus.CLASSIFIED) {
+      if (wastePhoto.status === WastePhotoStatus.CLASSIFIED && wastePhoto.user?.id && wastePhoto.company?.id) {
+        // Начисляем базовые очки и опыт за классификацию
+        const basePoints = 10;
+        const baseExperience = 5;
+        
+        // Бонус за правильную классификацию (если recommendedBinType совпадает с выбранным)
+        const bonusPoints = wastePhoto.recommendedBinType ? 5 : 0;
+        const bonusExperience = wastePhoto.recommendedBinType ? 3 : 0;
+        
+        await this.gamificationService.awardPointsAndExperience(
+          wastePhoto.user.id,
+          basePoints + bonusPoints,
+          baseExperience + bonusExperience,
+          wastePhoto.company.id,
+        );
+        
+        // Обновляем streak пользователя
+        await this.gamificationService.updateStreak(
+          wastePhoto.user.id,
+          wastePhoto.company.id,
+        );
+        
+        // Проверяем и выдаем ачивки
         const earnedAchievements = await this.achievementService.checkAndGrantForEmployeeByPhoto(
           wastePhoto,
         );
         
-        // Invalidate analytics cache for the company
-        if (wastePhoto.company?.id) {
-          await this.cacheService.invalidateCompanyCache(wastePhoto.company.id);
+        // Начисляем награды за полученные ачивки
+        for (const earnedAchievement of earnedAchievements) {
+          const achievement = earnedAchievement.achievement;
+          if (achievement.rewardPoints || achievement.rewardExperience) {
+            await this.gamificationService.awardPointsAndExperience(
+              wastePhoto.user.id,
+              achievement.rewardPoints || 0,
+              achievement.rewardExperience || 0,
+              wastePhoto.company.id,
+            );
+          }
         }
         
+        // Invalidate analytics cache for the company
+        await this.cacheService.invalidateCompanyCache(wastePhoto.company.id);
+        
         // Publish leaderboard update event if achievements were earned
-        if (earnedAchievements.length > 0 && wastePhoto.company?.id) {
+        if (earnedAchievements.length > 0) {
           await this.pubSub.publish('leaderboardUpdated', {
             leaderboardUpdated: {
               companyId: wastePhoto.company.id,
-              userId: wastePhoto.user?.id,
+              userId: wastePhoto.user.id,
             },
           });
         }

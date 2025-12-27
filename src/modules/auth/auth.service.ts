@@ -423,6 +423,49 @@ export class AuthService {
     return user;
   }
 
+  async logout(
+    userId: string,
+    requestInfo?: { ipAddress?: string; userAgent?: string },
+    res?: Response,
+  ): Promise<{ success: boolean }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (user) {
+      // Clear refresh token
+      user.refreshToken = null;
+      user.refreshTokenExpiresAt = null;
+      await this.userRepository.save(user);
+
+      // Clear refresh token cookie
+      if (res) {
+        res.clearCookie('refresh-token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+        });
+      }
+
+      // Audit log for logout
+      this.auditLogger.log({
+        action: AuditAction.LOGOUT,
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role,
+        metadata: {
+          ipAddress: requestInfo?.ipAddress,
+          userAgent: requestInfo?.userAgent,
+        },
+      });
+
+      this.logger.log(`Пользователь ${user.email} вышел из системы`);
+    }
+
+    return { success: true };
+  }
+
   async confirmEmail(input: ConfirmEmailInput): Promise<UserEntity> {
     const user = await this.userRepository.findOne({
       where: { emailConfirmationToken: input.token },
@@ -440,238 +483,6 @@ export class AuthService {
     user.isEmailConfirmed = true;
     user.emailConfirmationToken = null;
     
-    // Audit log for email confirmation
-    this.auditLogger.log({
-      action: AuditAction.EMAIL_CONFIRMED,
-      userId: user.id,
-      userEmail: user.email,
-      userRole: user.role,
-      metadata: {
-        confirmationMethod: 'token',
-      },
-    });
-    const savedUser = await this.userRepository.save(user);
-    const confirmedUser = await this.userRepository.findOneOrFail({
-      where: { id: savedUser.id },
-      relations: ['logo', 'employeeCompanies', 'employeeCompanies.logo', 'createdCompanies', 'createdCompanies.logo'],
-    });
-
-    this.logger.log(`Электронная почта ${confirmedUser.email} подтверждена`);
-
-    return confirmedUser;
-  }
-
-  async validateToken(token: string): Promise<JwtPayload | null> {
-    try {
-      const payload = this.jwtService.verify<JwtPayload>(token, {
-        secret: this.configService.config.jwtToken.secret,
-      });
-      return payload;
-    } catch (error) {
-      this.logger.warn(`Невалидный JWT токен: ${error.message}`);
-      return null;
-    }
-  }
-
-  async refreshToken(
-    input: RefreshTokenInput,
-    req?: Request,
-    res?: Response,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    // Get refresh token from cookie or input (cookie takes priority)
-    const refreshTokenFromCookie = req?.cookies?.['refresh-token'];
-    const refreshToken = refreshTokenFromCookie || input.refreshToken;
-
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh токен не найден');
-    }
-
-    // Verify the refresh token
-    let payload: JwtPayload;
-    try {
-      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: this.configService.config.jwtToken.secret,
-      });
-    } catch (error) {
-      throw new UnauthorizedException('Невалидный или истекший refresh токен');
-    }
-
-    // Check if token type is refresh
-    if ((payload as any).type !== 'refresh') {
-      throw new UnauthorizedException('Токен не является refresh токеном');
-    }
-
-    // Find user and verify refresh token matches
-    const user = await this.userRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Пользователь не найден');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Аккаунт деактивирован');
-    }
-
-    if (user.refreshToken !== refreshToken) {
-      throw new UnauthorizedException('Невалидный refresh токен');
-    }
-
-    // Check if refresh token is expired
-    if (user.refreshTokenExpiresAt && user.refreshTokenExpiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh токен истек');
-    }
-
-    // Generate new tokens
-    const newAccessToken = this.generateAccessToken(payload);
-    const newRefreshToken = this.generateRefreshToken(payload);
-
-    // Update user tokens
-    const refreshTokenExpiresAt = new Date();
-    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7);
-
-    user.jwtToken = newAccessToken;
-    user.refreshToken = newRefreshToken;
-    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
-    await this.userRepository.save(user);
-
-    // Set new refresh token in httpOnly cookie (token rotation)
-    if (res) {
-      res.cookie('refresh-token', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/',
-      });
-    }
-
-    this.logger.log(`Токены обновлены для пользователя ${user.email}`);
-
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken, // Still return for backward compatibility, but client should use cookie
-    };
-  }
-}
-
-    // Audit log for email confirmation
-    this.auditLogger.log({
-      action: AuditAction.EMAIL_CONFIRMED,
-      userId: user.id,
-      userEmail: user.email,
-      userRole: user.role,
-      metadata: {
-        confirmationMethod: 'token',
-      },
-    });
-    const savedUser = await this.userRepository.save(user);
-    const confirmedUser = await this.userRepository.findOneOrFail({
-      where: { id: savedUser.id },
-      relations: ['logo', 'employeeCompanies', 'employeeCompanies.logo', 'createdCompanies', 'createdCompanies.logo'],
-    });
-
-    this.logger.log(`Электронная почта ${confirmedUser.email} подтверждена`);
-
-    return confirmedUser;
-  }
-
-  async validateToken(token: string): Promise<JwtPayload | null> {
-    try {
-      const payload = this.jwtService.verify<JwtPayload>(token, {
-        secret: this.configService.config.jwtToken.secret,
-      });
-      return payload;
-    } catch (error) {
-      this.logger.warn(`Невалидный JWT токен: ${error.message}`);
-      return null;
-    }
-  }
-
-  async refreshToken(
-    input: RefreshTokenInput,
-    req?: Request,
-    res?: Response,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    // Get refresh token from cookie or input (cookie takes priority)
-    const refreshTokenFromCookie = req?.cookies?.['refresh-token'];
-    const refreshToken = refreshTokenFromCookie || input.refreshToken;
-
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh токен не найден');
-    }
-
-    // Verify the refresh token
-    let payload: JwtPayload;
-    try {
-      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: this.configService.config.jwtToken.secret,
-      });
-    } catch (error) {
-      throw new UnauthorizedException('Невалидный или истекший refresh токен');
-    }
-
-    // Check if token type is refresh
-    if ((payload as any).type !== 'refresh') {
-      throw new UnauthorizedException('Токен не является refresh токеном');
-    }
-
-    // Find user and verify refresh token matches
-    const user = await this.userRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Пользователь не найден');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Аккаунт деактивирован');
-    }
-
-    if (user.refreshToken !== refreshToken) {
-      throw new UnauthorizedException('Невалидный refresh токен');
-    }
-
-    // Check if refresh token is expired
-    if (user.refreshTokenExpiresAt && user.refreshTokenExpiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh токен истек');
-    }
-
-    // Generate new tokens
-    const newAccessToken = this.generateAccessToken(payload);
-    const newRefreshToken = this.generateRefreshToken(payload);
-
-    // Update user tokens
-    const refreshTokenExpiresAt = new Date();
-    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7);
-
-    user.jwtToken = newAccessToken;
-    user.refreshToken = newRefreshToken;
-    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
-    await this.userRepository.save(user);
-
-    // Set new refresh token in httpOnly cookie (token rotation)
-    if (res) {
-      res.cookie('refresh-token', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/',
-      });
-    }
-
-    this.logger.log(`Токены обновлены для пользователя ${user.email}`);
-
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken, // Still return for backward compatibility, but client should use cookie
-    };
-  }
-}
-
     // Audit log for email confirmation
     this.auditLogger.log({
       action: AuditAction.EMAIL_CONFIRMED,

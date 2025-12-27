@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -146,6 +146,49 @@ export class UserEntity {
   })
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  // Gamification fields
+  @Field(() => Int, {
+    description: 'Текущий уровень пользователя',
+    defaultValue: 1,
+  })
+  @Column({ type: 'int', default: 1 })
+  level: number;
+
+  @Field(() => Int, {
+    description: 'Очки опыта пользователя',
+    defaultValue: 0,
+  })
+  @Column({ type: 'int', default: 0 })
+  experience: number;
+
+  @Field(() => Int, {
+    description: 'Общее количество очков пользователя',
+    defaultValue: 0,
+  })
+  @Column({ type: 'int', default: 0 })
+  totalPoints: number;
+
+  @Field(() => Int, {
+    description: 'Текущая серия дней подряд (streak)',
+    defaultValue: 0,
+  })
+  @Column({ type: 'int', default: 0 })
+  currentStreak: number;
+
+  @Field(() => Int, {
+    description: 'Лучшая серия дней подряд',
+    defaultValue: 0,
+  })
+  @Column({ type: 'int', default: 0 })
+  bestStreak: number;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'Дата последней активности пользователя',
+  })
+  @Column({ type: 'timestamptz', nullable: true })
+  lastActivityDate?: Date | null;
 
   @BeforeInsert()
   async normalizeAndHashPassword(): Promise<void> {

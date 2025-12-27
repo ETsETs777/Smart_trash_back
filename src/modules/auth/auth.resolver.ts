@@ -107,4 +107,21 @@ export class AuthResolver {
   me(@CurrentUser() user: JwtPayload): Promise<UserEntity> {
     return this.authService.me(user);
   }
+
+  @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  @Mutation(() => Boolean, {
+    description: 'Выход пользователя из системы. Очищает токены и логирует событие.',
+  })
+  async logout(
+    @CurrentUser() user: JwtPayload,
+    @Context() context: any,
+  ): Promise<boolean> {
+    const req = context.req as any;
+    const res = context.res as any;
+    const ipAddress = req?.ip || req?.connection?.remoteAddress || req?.headers?.['x-forwarded-for']?.split(',')[0] || 'unknown';
+    const userAgent = req?.headers?.['user-agent'] || 'unknown';
+    
+    const result = await this.authService.logout(user.sub, { ipAddress, userAgent }, res);
+    return result.success;
+  }
 }

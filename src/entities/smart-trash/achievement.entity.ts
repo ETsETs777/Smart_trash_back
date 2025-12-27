@@ -4,6 +4,7 @@ import { CompanyEntity } from './company.entity';
 import { AchievementCriterionType } from './achievement-criterion.enum';
 import { UserEntity } from './user.entity';
 import { EmployeeAchievementEntity } from './employee-achievement.entity';
+import { SeasonalEventEntity } from './seasonal-event.entity';
 
 @ObjectType({ description: 'Ачивка, которую может получить сотрудник' })
 @Entity('achievements')
@@ -67,6 +68,38 @@ export class AchievementEntity {
   @Field(() => Date, { description: 'Дата и время последнего обновления ачивки' })
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: 'Награда в очках за получение ачивки',
+  })
+  @Column({ type: 'int', nullable: true })
+  rewardPoints?: number | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: 'Награда в опыте за получение ачивки',
+  })
+  @Column({ type: 'int', nullable: true })
+  rewardExperience?: number | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'URL иконки/значка ачивки',
+  })
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  badgeIconUrl?: string | null;
+
+  @Field(() => SeasonalEventEntity, {
+    nullable: true,
+    description: 'Сезонное событие, к которому относится ачивка',
+  })
+  @ManyToOne(() => SeasonalEventEntity, (event) => event.specialAchievements, {
+    onDelete: 'SET NULL',
+    nullable: true,
+    eager: false,
+  })
+  seasonalEvent?: SeasonalEventEntity | null;
 
   @BeforeInsert()
   trimFields(): void {

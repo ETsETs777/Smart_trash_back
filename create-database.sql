@@ -36,3 +36,4 @@ CREATE DATABASE smart_trash_app_template_dev
 GRANT ALL PRIVILEGES ON DATABASE smart_trash_app_template_dev TO postgres;
 
 
+

@@ -25,7 +25,7 @@ import { IFileOrImageUploadBody } from '../interfaces/file-or-image-upload-body.
 import { FileEndpoints } from '../endpoints/file.endpoints';
 import ContentDisposition from 'content-disposition';
 import { Public } from 'src/decorators/auth/public.decorator';
-import { validateFileSize, sanitizeFilename } from '../utils/file-content-validator';
+import { validateFileSize, sanitizeFilename, validateFileContent } from '../utils/file-content-validator';
 
 @Controller(FileEndpoints.rootEndpoint)
 export class FileController {
@@ -54,6 +54,35 @@ export class FileController {
     // Validate file size (50MB max)
     const MAX_FILE_SIZE = 50 * 1024 * 1024;
     validateFileSize(file.size, MAX_FILE_SIZE);
+
+    // Validate file type (MIME type and content)
+    const ALLOWED_MIME_TYPES = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
+    ];
+
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Тип файла ${file.mimetype} не разрешен. Разрешенные типы: ${ALLOWED_MIME_TYPES.join(', ')}`,
+      );
+    }
+
+    // Validate file content using magic numbers
+    if (file.buffer) {
+      try {
+        validateFileContent(file.buffer, file.mimetype);
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException('Не удалось проверить содержимое файла');
+      }
+    }
 
     // Sanitize filename
     const sanitizedFilename = sanitizeFilename(file.originalname || 'file');
@@ -101,30 +130,6 @@ export class FileController {
         throw new BadRequestException(
           'При попытке получить файл из хранилища S3(minio) произошла ошибка.',
         );
-      }
-    });
-
-    res.set({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': ContentDisposition(file.name),
-    });
-
-    return new StreamableFile(fileStream);
-  }
-}
-
-      }
-    });
-
-    res.set({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': ContentDisposition(file.name),
-    });
-
-    return new StreamableFile(fileStream);
-  }
-}
-
       }
     });
 

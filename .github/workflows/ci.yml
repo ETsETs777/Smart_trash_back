@@ -100,3 +100,4 @@ jobs:
         path: Smart_trash_back/dist
         retention-days: 7
 
+

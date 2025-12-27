@@ -11,6 +11,11 @@ import { CollectionAreaBinEntity } from 'src/entities/smart-trash/collection-are
 import { AchievementEntity } from 'src/entities/smart-trash/achievement.entity';
 import { EmployeeAchievementEntity } from 'src/entities/smart-trash/employee-achievement.entity';
 import { WastePhotoEntity } from 'src/entities/smart-trash/waste-photo.entity';
+import { DailyChallengeEntity } from 'src/entities/smart-trash/daily-challenge.entity';
+import { DailyChallengeProgressEntity } from 'src/entities/smart-trash/daily-challenge-progress.entity';
+import { SeasonalEventEntity } from 'src/entities/smart-trash/seasonal-event.entity';
+import { TeamCompetitionEntity } from 'src/entities/smart-trash/team-competition.entity';
+import { TeamCompetitionParticipantEntity } from 'src/entities/smart-trash/team-competition-participant.entity';
 import { ImageEntity } from 'src/entities/files/image.entity';
 import { CollectionAreaService } from './services/collection-area.service';
 import { CollectionAreaBinService } from './services/collection-area-bin.service';
@@ -18,6 +23,7 @@ import { WastePhotoService } from './services/waste-photo.service';
 import { WasteClassificationService } from './services/waste-classification.service';
 import { AnalyticsService } from './analytics/analytics.service';
 import { AchievementService } from './services/achievement.service';
+import { GamificationService } from './services/gamification.service';
 import { WasteClassificationProcessor } from './queues/waste-classification.processor';
 import { EmployeeResolver } from './resolvers/employee.resolver';
 import { CollectionAreaResolver } from './resolvers/collection-area.resolver';
@@ -43,6 +49,11 @@ import { PubSubService } from 'src/common/pubsub/pubsub.service';
       AchievementEntity,
       EmployeeAchievementEntity,
       WastePhotoEntity,
+      DailyChallengeEntity,
+      DailyChallengeProgressEntity,
+      SeasonalEventEntity,
+      TeamCompetitionEntity,
+      TeamCompetitionParticipantEntity,
       ImageEntity,
     ]),
     BullModule.registerQueue({
@@ -61,6 +72,7 @@ import { PubSubService } from 'src/common/pubsub/pubsub.service';
     WastePhotoService,
     WasteClassificationService,
     AchievementService,
+    GamificationService,
     AnalyticsService,
     WasteClassificationProcessor,
     CollectionAreaResolver,

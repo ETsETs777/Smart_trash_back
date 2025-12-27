@@ -126,3 +126,4 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host "`nDatabase 'smart_trash_app_template_dev' should now be available." -ForegroundColor Green
 
 
+
