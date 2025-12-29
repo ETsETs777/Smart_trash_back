@@ -3,6 +3,9 @@ import { GamificationService } from '../services/gamification.service';
 import { UserProgressDto } from 'src/common/dto/user-progress.dto';
 import { DailyChallengeEntity } from 'src/entities/smart-trash/daily-challenge.entity';
 import { DailyChallengeProgressEntity } from 'src/entities/smart-trash/daily-challenge-progress.entity';
+import { TeamCompetitionEntity } from 'src/entities/smart-trash/team-competition.entity';
+import { TeamCompetitionParticipantEntity } from 'src/entities/smart-trash/team-competition-participant.entity';
+import { SeasonalEventEntity } from 'src/entities/smart-trash/seasonal-event.entity';
 import { CurrentUser } from 'src/decorators/auth/current-user.decorator';
 import { JwtPayload } from 'src/modules/auth/jwt-payload.interface';
 import { Roles } from 'src/modules/auth/roles.decorator';
@@ -19,6 +22,12 @@ export class GamificationResolver {
     private readonly challengeRepository: Repository<DailyChallengeEntity>,
     @InjectRepository(DailyChallengeProgressEntity)
     private readonly challengeProgressRepository: Repository<DailyChallengeProgressEntity>,
+    @InjectRepository(TeamCompetitionEntity)
+    private readonly teamCompetitionRepository: Repository<TeamCompetitionEntity>,
+    @InjectRepository(TeamCompetitionParticipantEntity)
+    private readonly teamParticipantRepository: Repository<TeamCompetitionParticipantEntity>,
+    @InjectRepository(SeasonalEventEntity)
+    private readonly seasonalEventRepository: Repository<SeasonalEventEntity>,
   ) {}
 
   @Query(() => UserProgressDto, {
@@ -144,6 +153,98 @@ export class GamificationResolver {
     );
 
     return progressList.filter((p) => p !== null) as DailyChallengeProgressEntity[];
+  }
+
+  @Query(() => [TeamCompetitionEntity], {
+    description: 'Получить активные командные соревнования для компании',
+  })
+  @CacheQuery({
+    ttl: 300, // Cache for 5 minutes
+    keyGenerator: (args) => `query:team-competitions:company:${args.companyId}`,
+  })
+  @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  async teamCompetitions(
+    @Args('companyId', { description: 'Идентификатор компании' })
+    companyId: string,
+  ): Promise<TeamCompetitionEntity[]> {
+    const now = new Date();
+
+    const competitions = await this.teamCompetitionRepository.find({
+      where: {
+        company: { id: companyId },
+        isActive: true,
+      },
+      relations: ['company', 'participants', 'participants.members'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Фильтруем активные соревнования
+    return competitions.filter((competition) => {
+      return now >= competition.startDate && now <= competition.endDate;
+    });
+  }
+
+  @Query(() => [TeamCompetitionParticipantEntity], {
+    description: 'Получить участников командного соревнования с рейтингом',
+  })
+  @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  async teamCompetitionParticipants(
+    @Args('competitionId', { description: 'Идентификатор соревнования' })
+    competitionId: string,
+  ): Promise<TeamCompetitionParticipantEntity[]> {
+    const participants = await this.teamParticipantRepository.find({
+      where: {
+        competition: { id: competitionId },
+      },
+      relations: ['competition', 'members'],
+      order: { totalPoints: 'DESC' },
+    });
+
+    // Обновляем рейтинг
+    participants.forEach((participant, index) => {
+      participant.rank = index + 1;
+    });
+
+    return participants;
+  }
+
+  @Query(() => [SeasonalEventEntity], {
+    description: 'Получить активные сезонные события для компании',
+  })
+  @CacheQuery({
+    ttl: 300, // Cache for 5 minutes
+    keyGenerator: (args) => `query:seasonal-events:company:${args.companyId || 'global'}`,
+  })
+  @Roles(AuthRole.ADMIN_COMPANY, AuthRole.EMPLOYEE)
+  async seasonalEvents(
+    @Args('companyId', {
+      description: 'Идентификатор компании (опционально, для глобальных событий)',
+      nullable: true,
+    })
+    companyId?: string,
+  ): Promise<SeasonalEventEntity[]> {
+    const now = new Date();
+
+    const whereCondition: any = {
+      isActive: true,
+    };
+
+    if (companyId) {
+      whereCondition.company = { id: companyId };
+    } else {
+      whereCondition.company = null;
+    }
+
+    const events = await this.seasonalEventRepository.find({
+      where: whereCondition,
+      relations: ['company', 'specialAchievements'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Фильтруем активные события
+    return events.filter((event) => {
+      return now >= event.startDate && now <= event.endDate;
+    });
   }
 }
 
