@@ -8,6 +8,7 @@ import { DailyChallengeEntity } from 'src/entities/smart-trash/daily-challenge.e
 import { AchievementEntity } from 'src/entities/smart-trash/achievement.entity';
 import { SeasonalEventEntity } from 'src/entities/smart-trash/seasonal-event.entity';
 import { AchievementCriterionType } from 'src/entities/smart-trash/achievement-criterion.enum';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
 
 /**
  * Сервис для управления геймификацией
@@ -43,6 +44,7 @@ export class GamificationService {
     private readonly challengeRepository: Repository<DailyChallengeEntity>,
     @InjectRepository(SeasonalEventEntity)
     private readonly seasonalEventRepository: Repository<SeasonalEventEntity>,
+    private readonly pubSub: PubSubService,
   ) {}
 
   /**
@@ -151,6 +153,20 @@ export class GamificationService {
     if (levelUp) {
       this.logger.log(`User ${user.email} leveled up from ${user.level} to ${newLevel}`);
       user.level = newLevel;
+      
+      // Publish level up event
+      await this.pubSub.publish('levelUp', {
+        levelUp: {
+          user: {
+            id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+          },
+          oldLevel: oldLevel,
+          newLevel: newLevel,
+          companyId: companyId,
+        },
+      });
     }
 
     await this.userRepository.save(user);

@@ -1,4 +1,4 @@
-import { Args, Query, Resolver, ID } from '@nestjs/graphql';
+import { Args, Query, Resolver, ID, Subscription } from '@nestjs/graphql';
 import { GamificationService } from '../services/gamification.service';
 import { UserProgressDto } from 'src/common/dto/user-progress.dto';
 import { DailyChallengeEntity } from 'src/entities/smart-trash/daily-challenge.entity';
@@ -13,6 +13,9 @@ import { AuthRole } from 'src/modules/auth/auth-role.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CacheQuery } from 'src/common/decorators/cache-query.decorator';
+import { PubSubService } from 'src/common/pubsub/pubsub.service';
+import { Public } from 'src/decorators/auth/public.decorator';
+import { LevelUpPayload } from 'src/common/dto/level-up.dto';
 
 @Resolver()
 export class GamificationResolver {
@@ -28,6 +31,7 @@ export class GamificationResolver {
     private readonly teamParticipantRepository: Repository<TeamCompetitionParticipantEntity>,
     @InjectRepository(SeasonalEventEntity)
     private readonly seasonalEventRepository: Repository<SeasonalEventEntity>,
+    private readonly pubSub: PubSubService,
   ) {}
 
   @Query(() => UserProgressDto, {
@@ -245,6 +249,17 @@ export class GamificationResolver {
     return events.filter((event) => {
       return now >= event.startDate && now <= event.endDate;
     });
+  }
+
+  @Public()
+  @Subscription(() => LevelUpPayload, {
+    description: 'Подписка на повышение уровня пользователя',
+    filter: (payload, variables) => {
+      return payload.levelUp.user.id === variables.userId;
+    },
+  })
+  levelUp(@Args('userId', { type: () => ID }) userId: string) {
+    return this.pubSub.asyncIterator('levelUp');
   }
 }
 
