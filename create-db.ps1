@@ -127,3 +127,4 @@ Write-Host "`nDatabase 'smart_trash_app_template_dev' should now be available." 
 
 
 
+

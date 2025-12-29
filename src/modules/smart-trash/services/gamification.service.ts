@@ -362,11 +362,18 @@ export class GamificationService {
   }> {
     const now = new Date();
 
+    const whereCondition: any = {
+      isActive: true,
+    };
+
+    if (companyId) {
+      whereCondition.company = { id: companyId };
+    } else {
+      whereCondition.company = null;
+    }
+
     const events = await this.seasonalEventRepository.find({
-      where: {
-        isActive: true,
-        ...(companyId ? { company: { id: companyId } } : { company: null }),
-      },
+      where: whereCondition,
     });
 
     // Фильтруем активные события

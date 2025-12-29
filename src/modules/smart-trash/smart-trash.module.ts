@@ -32,6 +32,7 @@ import { WastePhotoResolver } from './resolvers/waste-photo.resolver';
 import { AnalyticsResolver } from './resolvers/analytics.resolver';
 import { AchievementResolver } from './resolvers/achievement.resolver';
 import { BarcodeResolver } from './resolvers/barcode.resolver';
+import { GamificationResolver } from './resolvers/gamification.resolver';
 import { CompanyService } from './services/company.service';
 import { CompanyResolver } from './resolvers/company.resolver';
 import { UserService } from './services/user.service';
@@ -84,6 +85,7 @@ import { PubSubService } from 'src/common/pubsub/pubsub.service';
     UserResolver,
     EmployeeResolver,
     BarcodeResolver,
+    GamificationResolver,
     PubSubService,
   ],
   exports: [PubSubService],
